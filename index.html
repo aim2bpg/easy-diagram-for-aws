@@ -1,682 +1,2648 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>簡易構成図ツール for AWS</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-<style>
-*{box-sizing:border-box}
-body{overflow:auto;margin:0;padding:10px;background:#fff;font-family:'Segoe UI',sans-serif}
-.r{transition:opacity .3s}.r.off{opacity:0;pointer-events:none}
-.b{border:2px solid #555;background:#fff;padding:5px 13px;font-size:12px;white-space:nowrap;position:absolute;z-index:20}
-svg line{transition:opacity .3s}svg line.off{opacity:0}
-.tb{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;padding:1px 4px;border:none;background:none;cursor:pointer;font-size:11px;border-radius:2px;white-space:nowrap}
-.tb:hover{background:#eee}.dot{color:#22c55e;font-size:10px}
-</style>
-</head>
-<body>
-<div id="mob-warn" style="display:none;background:#fef3c7;border:1px solid #f59e0b;padding:8px 12px;border-radius:4px;margin-bottom:8px;font-size:13px;text-align:center;">
-  ⚠️ このツールはPC（横幅 1400px以上）での利用を推奨しています。スマートフォン・タブレットでは表示が崩れる場合があります。
-</div>
-<script>if(window.innerWidth<1024)document.getElementById('mob-warn').style.display='block'</script>
-<div style="padding:8px 16px;background:#232F3E;color:#fff;font-size:16px;font-weight:bold;text-align:center;border-radius:4px;margin-bottom:8px;">
-<span style="color:#FF9900;">&#9632;</span> 簡易構成図ツール for AWS
-</div>
-<div style="display:flex;gap:6px;">
-
-<!-- サイドバー -->
-<div style="width:155px;flex-shrink:0;font-size:11px;">
-<div style="font-weight:bold;margin-bottom:5px;font-size:13px;">リソース制御</div>
-<div style="border:1px solid #ccc;border-radius:4px;padding:4px;margin-bottom:3px;">
-<div style="font-weight:bold;color:#c06080;font-size:11px;margin-bottom:2px;">①システム管理</div>
-<button class="tb" data-r="session-mgr">セッションマネージャー<span class="dot">●</span></button>
-</div>
-<div style="border:1px solid #ccc;border-radius:4px;padding:4px;margin-bottom:3px;">
-<div style="font-weight:bold;color:#5c9040;font-size:11px;margin-bottom:2px;">②データストア</div>
-<button class="tb" data-r="aurora">Aurora<span class="dot">●</span></button>
-<button class="tb" data-r="dynamodb">DynamoDB<span class="dot">●</span></button>
-<button class="tb" data-r="efs">EFS<span class="dot">●</span></button>
-<button class="tb" data-r="elasticache">ElastiCache<span class="dot">●</span></button>
-<button class="tb" data-r="rds">RDS<span class="dot">●</span></button>
-</div>
-<div style="border:1px solid #ccc;border-radius:4px;padding:4px;margin-bottom:3px;">
-<div style="font-weight:bold;color:#7060b0;font-size:11px;margin-bottom:2px;">③ネットワーク</div>
-<button class="tb" data-r="acm">ACM<span class="dot">●</span></button>
-<button class="tb" data-rs="network-fw,elb-pub-border,elb-pub-label">ALB<span class="dot">●</span></button>
-<button class="tb" data-r="api-gateway">APIゲートウェイ<span class="dot">●</span></button>
-<button class="tb" data-rs="aws-waf,aws-waf2,aws-waf3">AWS WAF<span class="dot">●</span></button>
-<button class="tb" data-r="cloudfront">CloudFront<span class="dot">●</span></button>
-<button class="tb" data-r="ngw">NGW<span class="dot">●</span></button>
-<button class="tb" data-r="nfw">ネットワークFW<span class="dot">●</span></button>
-<button class="tb" data-rs="vpc-frame,vpc-label,igw,vpc-endpoint,vpc-flowlog,route53-vpc,ps-left-label,ps-left-frame,ps-right-label,ps-right-frame,pub-frame,pub-label,pub2-frame,pub2-label,ps2-left-frame,ps2-left-label,ps2-right-frame,ps2-right-label,az-a,az-b">VPC内部<span class="dot">●</span></button>
-</div>
-<div style="border:1px solid #ccc;border-radius:4px;padding:4px;margin-bottom:3px;">
-<div style="font-weight:bold;color:#c07828;font-size:11px;margin-bottom:2px;">④コンピューティング</div>
-<button id="fe-btn" class="tb">⁠FE層 + ALB(内部)<span class="dot" style="color:#22c55e">●</span></button>
-<button class="tb" data-rs="ec2">⁠EC2<span class="dot">●</span></button>
-<button class="tb" data-rs="eks">⁠EKS<span class="dot">●</span></button>
-<button class="tb" data-r="eni">⁠ENI<span class="dot">●</span></button>
-<button class="tb" data-rs="fargate">⁠Fargate<span class="dot">●</span></button>
-<button class="tb" data-r="lambda2">⁠Lambda<span class="dot">●</span></button>
-</div>
-<div style="border:1px solid #ccc;border-radius:4px;padding:4px;margin-bottom:3px;">
-<div style="font-weight:bold;color:#b05050;font-size:11px;margin-bottom:2px;">⑤CI/CD</div>
-<button class="tb" data-rs="codecommit,codebuild,codedeploy,cp-frame,cp-label">CodePipeline<span class="dot">●</span></button>
-<button class="tb" data-r="ecr">ECR<span class="dot">●</span></button>
-<button class="tb" data-r="ecs">ECS<span class="dot">●</span></button>
-</div>
-<button id="ha-btn" style="width:100%;padding:4px;background:#7c3aed;color:#fff;border:none;border-radius:3px;font-size:11px;font-weight:bold;cursor:pointer;margin-bottom:3px;">🔄 HA/冗長化 (OFF)</button>
-<button id="sa" style="width:100%;padding:4px;background:#22c55e;color:#fff;border:none;border-radius:3px;font-size:11px;font-weight:bold;cursor:pointer;margin-bottom:3px;">すべて表示</button>
-<button id="ha" style="width:100%;padding:4px;background:#ef4444;color:#fff;border:none;border-radius:3px;font-size:11px;font-weight:bold;cursor:pointer;">すべて非表示</button>
-<button id="pst" style="width:100%;padding:4px;background:#f59e0b;color:#fff;border:none;border-radius:3px;font-size:11px;font-weight:bold;cursor:pointer;margin-top:3px;">🔒↔🔓 サブネット切替</button>
-</div>
-
-<!-- メイン図 -->
-<div style="flex:1;min-width:1340px;">
-<div id="cv" style="position:relative;width:1340px;height:780px;border:3px solid #222;border-radius:4px;background:#fff;">
-
-<!-- 右上ツールボタン -->
-<div style="position:absolute;top:8px;right:20px;z-index:70;display:flex;flex-direction:row;gap:6px;align-items:flex-start;">
-<!-- プリセット構成ボタン -->
-<div style="display:flex;flex-direction:column;gap:3px;">
-<a href="?s=c2Vzc2lvbi1tZ3I6MSxhdXJvcmE6MSxkeW5hbW9kYjowLGVmczowLGVsYXN0aWNhY2hlOjAscmRzOjAsYWNtOjAsbmV0d29yay1mdzowLGVsYi1wdWItYm9yZGVyOjAsZWxiLXB1Yi1sYWJlbDowLGFwaS1nYXRld2F5OjAsYXdzLXdhZjoxLGF3cy13YWYyOjEsYXdzLXdhZjM6MSxjbG91ZGZyb250OjAsbmd3OjAsbmZ3OjAsdnBjLWZyYW1lOjEsdnBjLWxhYmVsOjEsaWd3OjEsdnBjLWVuZHBvaW50OjEsdnBjLWZsb3dsb2c6MSxyb3V0ZTUzLXZwYzoxLHBzLWxlZnQtbGFiZWw6MSxwcy1sZWZ0LWZyYW1lOjEscHMtcmlnaHQtbGFiZWw6MSxwcy1yaWdodC1mcmFtZToxLHB1Yi1mcmFtZToxLHB1Yi1sYWJlbDoxLHB1YjItZnJhbWU6MSxwdWIyLWxhYmVsOjEscHMyLWxlZnQtZnJhbWU6MSxwczItbGVmdC1sYWJlbDoxLHBzMi1yaWdodC1mcmFtZToxLHBzMi1yaWdodC1sYWJlbDoxLGF6LWE6MSxhei1iOjEsdW5kZWZpbmVkOjAsZWMyOjEsZWtzOjAsZW5pOjAsZmFyZ2F0ZTowLGxhbWJkYTI6MCxjb2RlY29tbWl0OjAsY29kZWJ1aWxkOjAsY29kZWRlcGxveTowLGNwLWZyYW1lOjAsY3AtbGFiZWw6MCxlY3I6MCxlY3M6MCxfcHM6MSxfZmU6MCxfaGE6MA%3D%3D" style="padding:4px 9px;background:#475569;color:#fff;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;display:block;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.2);">🖥 EC2構成</a>
-<a href="?s=c2Vzc2lvbi1tZ3I6MCxhdXJvcmE6MSxkeW5hbW9kYjowLGVmczowLGVsYXN0aWNhY2hlOjEscmRzOjAsYWNtOjEsbmV0d29yay1mdzoxLGVsYi1wdWItYm9yZGVyOjEsZWxiLXB1Yi1sYWJlbDoxLGFwaS1nYXRld2F5OjAsYXdzLXdhZjoxLGF3cy13YWYyOjEsYXdzLXdhZjM6MSxjbG91ZGZyb250OjAsbmd3OjEsbmZ3OjAsdnBjLWZyYW1lOjEsdnBjLWxhYmVsOjEsaWd3OjEsdnBjLWVuZHBvaW50OjEsdnBjLWZsb3dsb2c6MSxyb3V0ZTUzLXZwYzoxLHBzLWxlZnQtbGFiZWw6MSxwcy1sZWZ0LWZyYW1lOjEscHMtcmlnaHQtbGFiZWw6MSxwcy1yaWdodC1mcmFtZToxLHB1Yi1mcmFtZToxLHB1Yi1sYWJlbDoxLHB1YjItZnJhbWU6MSxwdWIyLWxhYmVsOjEscHMyLWxlZnQtZnJhbWU6MSxwczItbGVmdC1sYWJlbDoxLHBzMi1yaWdodC1mcmFtZToxLHBzMi1yaWdodC1sYWJlbDoxLGF6LWE6MSxhei1iOjEsdW5kZWZpbmVkOjEsZWMyOjAsZWtzOjAsZW5pOjAsZmFyZ2F0ZToxLGxhbWJkYTI6MCxjb2RlY29tbWl0OjEsY29kZWJ1aWxkOjEsY29kZWRlcGxveToxLGNwLWZyYW1lOjEsY3AtbGFiZWw6MSxlY3I6MSxlY3M6MSxfcHM6MCxfZmU6MSxfaGE6MA%3D%3D" style="padding:4px 9px;background:#475569;color:#fff;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;display:block;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.2);">🐳 ECS構成</a>
-<a href="?s=c2Vzc2lvbi1tZ3I6MCxhdXJvcmE6MSxkeW5hbW9kYjoxLGVmczowLGVsYXN0aWNhY2hlOjAscmRzOjAsYWNtOjEsbmV0d29yay1mdzowLGVsYi1wdWItYm9yZGVyOjAsZWxiLXB1Yi1sYWJlbDowLGFwaS1nYXRld2F5OjEsYXdzLXdhZjoxLGF3cy13YWYyOjEsYXdzLXdhZjM6MSxjbG91ZGZyb250OjEsbmd3OjEsbmZ3OjAsdnBjLWZyYW1lOjEsdnBjLWxhYmVsOjEsaWd3OjEsdnBjLWVuZHBvaW50OjEsdnBjLWZsb3dsb2c6MSxyb3V0ZTUzLXZwYzoxLHBzLWxlZnQtbGFiZWw6MSxwcy1sZWZ0LWZyYW1lOjEscHMtcmlnaHQtbGFiZWw6MSxwcy1yaWdodC1mcmFtZToxLHB1Yi1mcmFtZToxLHB1Yi1sYWJlbDoxLHB1YjItZnJhbWU6MSxwdWIyLWxhYmVsOjEscHMyLWxlZnQtZnJhbWU6MSxwczItbGVmdC1sYWJlbDoxLHBzMi1yaWdodC1mcmFtZToxLHBzMi1yaWdodC1sYWJlbDoxLGF6LWE6MSxhei1iOjEsdW5kZWZpbmVkOjAsZWMyOjAsZWtzOjAsZW5pOjEsZmFyZ2F0ZTowLGxhbWJkYTI6MSxjb2RlY29tbWl0OjAsY29kZWJ1aWxkOjAsY29kZWRlcGxveTowLGNwLWZyYW1lOjAsY3AtbGFiZWw6MCxlY3I6MSxlY3M6MCxfcHM6MCxfZmU6MCxfaGE6MA%3D%3D" style="padding:4px 9px;background:#475569;color:#fff;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;display:block;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.2);">⚡ Lambda構成</a>
-</div>
-<!-- URL共有・図コピーボタン -->
-<div style="display:flex;flex-direction:column;gap:4px;">
-<button id="cp" style="padding:5px 10px;background:#6366f1;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.2);" title="URLをクリップボードにコピー">🔗 URL共有</button>
-<button id="imgcp" style="padding:5px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.2);" title="構成図を画像としてコピー">📷 図をコピー</button>
-</div>
-</div>
-
-<svg id="svg2" style="position:absolute;inset:0;width:100%;height:100%;z-index:15;pointer-events:none;">
-<defs><marker id="ah2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#444"/></marker></defs>
-</svg>
-
-<svg id="svg" style="position:absolute;inset:0;width:100%;height:100%;z-index:50;pointer-events:none;">
-<defs><marker id="ah" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#444"/></marker></defs>
-</svg>
-
-<svg id="svg3" style="position:absolute;inset:0;width:100%;height:100%;z-index:56;pointer-events:none;">
-<defs><marker id="ah3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#444"/></marker></defs>
-</svg>
-
-<!-- ===== 外部ユーザー ===== -->
-<div id="admin" class="absolute text-center" style="position:absolute;text-align:center;left:15px;top:83px;z-index:20;">
-<div style="font-size:24px">👥</div><div style="font-size:10px;font-weight:600">管理者</div>
-</div>
-<div id="github" class="absolute text-center" style="position:absolute;text-align:center;left:15px;top:150px;z-index:20;">
-<div style="font-size:22px">🐙</div><div style="font-size:10px;font-weight:600">GitHub</div>
-</div>
-<div id="gitlab" class="absolute text-center" style="position:absolute;text-align:center;left:15px;top:240px;z-index:20;">
-<div style="font-size:22px">🦊</div><div style="font-size:10px;font-weight:600">GitLab</div>
-</div>
-<div id="user" class="absolute text-center" style="position:absolute;text-align:center;left:15px;top:380px;z-index:20;">
-<div style="font-size:24px">👥</div><div style="font-size:10px;font-weight:600">ユーザー</div>
-</div>
-<div id="system" class="absolute text-center" style="position:absolute;text-align:center;left:15px;top:455px;z-index:20;">
-<div style="font-size:24px">📋</div><div style="font-size:10px;font-weight:600">システム</div>
-</div>
-
-<!-- インターネット（中心をWAFに合わせ下に拡張） -->
-<div id="internet" class="absolute flex items-center justify-center"
-     style="left:85px;top:90px;width:55px;height:682px;border:2px solid #888;border-radius:50%;background:#f0f8ff;z-index:15;">
-<div style="font-size:10px;font-weight:600;writing-mode:vertical-rl;letter-spacing:1px;">インターネット</div>
-</div>
-
-<!-- ===== AWSクラウド ===== -->
-<div style="position:absolute;left:165px;top:10px;right:12px;bottom:10px;border:3px solid #232F3E;border-radius:5px;background:#f5f5f5;z-index:1;"></div>
-<div style="position:absolute;left:175px;top:3px;z-index:60;background:#f5f5f5;padding:0 5px;font-size:12px;">
-<span style="color:#FF9900;font-weight:bold;">&#9632;</span> <b>AWS クラウド</b>
-</div>
-
-<!-- ===== ① 管理・ガバナンス（Management & Governance） ===== -->
-<div style="position:absolute;left:693px;top:32px;width:319px;height:110px;border:2px solid #c06080;border-radius:4px;z-index:2;background:rgba(192,96,128,0.07);"></div>
-<div style="position:absolute;left:853px;top:18px;z-index:60;background:rgba(192,96,128,0.15);padding:0 5px;font-size:13px;font-weight:bold;transform:translateX(-50%)">❶システム管理</div>
-
-<!-- ①内リソース -->
-<div id="cloudtrail" class="r b" style="left:703px;top:50px;width:130px;text-align:center;">CloudTrail</div>
-<div id="aws-config" class="r b" style="left:852px;top:50px;width:130px;text-align:center;">AWS Config</div>
-<div id="session-mgr" class="r b" style="left:832px;top:100px;width:170px;text-align:center;">セッションマネージャー</div>
-
-<!-- マネジメントコンソール（①枠外） -->
-<div id="mgmt-console" class="r b" style="left:180px;top:100px;width:170px;text-align:center;">マネジメントコンソール</div>
-
-<!-- ===== ⑤ CI/CD・デベロッパーツール（Developer Tools） ===== -->
-<div style="position:absolute;left:178px;top:155px;width:482px;height:80px;border:2px solid #b05050;border-radius:4px;z-index:2;background:rgba(176,80,80,0.07);"></div>
-<div style="position:absolute;left:419px;top:143px;z-index:60;background:rgba(176,80,80,0.15);padding:0 5px;font-size:13px;font-weight:bold;transform:translateX(-50%);">❺CI/CD</div>
-
-<!-- CodePipeline（VPCのように黒枠） -->
-<div id="cp-frame" class="r" style="position:absolute;left:188px;top:170px;width:462px;height:52px;border:3px solid #777;border-radius:4px;z-index:3;background:#fff;"></div>
-<div id="cp-label" class="r" style="position:absolute;left:198px;top:162px;z-index:60;background:rgba(255,255,255,0.7);padding:0 4px;font-size:11px;"><b>CodePipeline</b></div>
-<div id="codecommit" class="r b" style="left:200px;top:182px;width:130px;text-align:center;">CodeCommit</div>
-<div id="codebuild" class="r b" style="left:355px;top:182px;width:130px;text-align:center;">CodeBuild</div>
-<div id="codedeploy" class="r b" style="left:510px;top:182px;width:130px;text-align:center;">CodeDeploy</div>
-<div id="ecs" class="r b" style="left:703px;top:182px;width:130px;text-align:center;">ECS</div>
-<div id="ecr" class="r b" style="left:852px;top:182px;width:130px;text-align:center;">ECR</div>
-
-<!-- ===== ② データストア（Database / Storage） ===== -->
-<div style="position:absolute;left:1154px;top:140px;width:148px;height:562px;border:2px solid #5c9040;border-radius:4px;z-index:9;background:rgba(92,144,64,0.07);"></div>
-<div style="position:absolute;left:1228px;top:126px;z-index:60;background:rgba(92,144,64,0.15);padding:0 5px;font-size:13px;font-weight:bold;transform:translateX(-50%)">❷データストア</div>
-
-<!-- ② VPC外リソース（S3・DynamoDB） -->
-<div id="dynamodb" class="r b" style="left:1166px;top:200px;width:130px;text-align:center;">DynamoDB</div>
-<div id="s3" class="r b" style="left:1166px;top:155px;width:130px;text-align:center;">S3</div>
-
-<!-- ② プライベートサブネット内DBリソース -->
-<div id="efs" class="r b" style="left:1166px;top:325px;width:130px;text-align:center;">EFS</div>
-<div id="elasticache" class="r b" style="left:1166px;top:370px;width:130px;text-align:center;">ElastiCache</div>
-<div id="aurora" class="r b" style="left:1166px;top:415px;width:130px;text-align:center;">Aurora</div>
-<div id="rds" class="r b" style="left:1166px;top:460px;width:130px;text-align:center;">RDS</div>
-
-<!-- ===== ③ ネットワーク（Networking & Content Delivery） ===== -->
-<div style="position:absolute;left:178px;top:268px;width:810px;height:434px;border:2px solid #7060b0;border-radius:4px;z-index:10;background:rgba(112,96,176,0.07);pointer-events:none;"></div>
-<div style="position:absolute;left:568px;top:254px;z-index:60;background:rgba(112,96,176,0.15);padding:0 5px;font-size:13px;font-weight:bold;transform:translateX(-50%);">❸ネットワーク</div>
-
-<!-- ③内リソース（VPC外、幅統一130px） -->
-<div id="route53" class="b" style="left:200px;top:460px;width:130px;text-align:center;">Route 53</div>
-<div id="aws-waf" class="r b" style="left:200px;top:325px;width:130px;text-align:center;z-index:55;">AWS WAF</div>
-<div id="aws-waf2" class="r b" style="left:200px;top:370px;width:130px;text-align:center;z-index:55;">AWS WAF</div>
-<div id="aws-waf3" class="r b" style="left:200px;top:415px;width:130px;text-align:center;z-index:55;">AWS WAF</div>
-<div id="acm" class="r b" style="left:200px;top:505px;width:130px;text-align:center;">ACM</div>
-<div id="cloudfront" class="r b" style="left:355px;top:325px;width:130px;text-align:center;z-index:55;">CloudFront</div>
-<div id="api-gateway" class="r b" style="left:355px;top:370px;width:130px;text-align:center;">APIゲートウェイ</div>
-
-<!-- ===== VPC（白背景、AWSクラウド内に収まる） ===== -->
-<div id="vpc-frame" class="r" style="position:absolute;left:505px;top:247px;right:25px;height:460px;background:#fff;border:3px solid #777;border-radius:4px;z-index:5;"></div>
-<div id="vpc-label" class="r" style="position:absolute;left:518px;top:239px;z-index:60;background:rgba(255,255,255,0.7);padding:0 4px;font-size:11px;">☁️ <b>VPC</b></div>
-
-<!-- Route53 VPC（サブネット外、VPC内、左揃え） -->
-<div id="route53-vpc" class="r b" style="left:544px;top:280px;width:130px;text-align:center;z-index:20;">Route 53 Resolver</div>
-
-<!-- AZ ラベル -->
-<div id="az-a" class="r" style="position:absolute;left:522px;top:330px;width:12px;height:164px;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(219,234,254,0.6);border-radius:2px;"><span style="writing-mode:vertical-rl;letter-spacing:2px;font-size:10px;font-weight:bold;color:#1d4ed8;">AZ-a</span></div>
-<div id="az-b" class="r" style="position:absolute;left:522px;top:520px;width:12px;height:164px;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(237,233,254,0.6);border-radius:2px;"><span style="writing-mode:vertical-rl;letter-spacing:2px;font-size:10px;font-weight:bold;color:#6d28d9;">AZ-c</span></div>
-
-<!-- プライベートサブネット左（ELB + ④コンピューティング） -->
-<div id="ps-left-label" class="r" style="position:absolute;left:701px;top:314px;z-index:60;background:rgba(230,230,230,0.6);padding:0 4px;font-size:10px;color:#ea580c;">🔒 <b>プライベートサブネット</b></div>
-<div id="ps-left-frame" class="r" style="position:absolute;left:696px;top:322px;width:447px;height:180px;background:rgba(200,200,200,0.25);border:2px solid #bbb;border-radius:4px;z-index:6;"></div>
-
-<!-- プライベートサブネット右（データストア） -->
-<div id="ps-right-label" class="r" style="position:absolute;left:1156px;top:314px;z-index:60;background:rgba(230,230,230,0.6);padding:0 4px;font-size:10px;color:#ea580c;">🔒 <b>プライベートサブネット</b></div>
-<div id="ps-right-frame" class="r" style="position:absolute;left:1151px;top:322px;width:150px;height:180px;background:rgba(200,200,200,0.25);border:2px solid #bbb;border-radius:4px;z-index:6;"></div>
-
-<!-- パブリックサブネット（AZ-a） -->
-<div id="pub-frame" class="r" style="position:absolute;left:536px;top:322px;width:150px;height:180px;background:rgba(125,194,66,0.12);border:2px solid #7DC242;border-radius:4px;z-index:7;"></div>
-<div id="pub-label" class="r" style="position:absolute;left:546px;top:314px;z-index:60;background:rgba(125,194,66,0.25);padding:0 4px;font-size:10px;color:#3F8624;">🔓 <b>パブリックサブネット</b></div>
-
-<!-- パブリックサブネット（AZ-c） -->
-<div id="pub2-frame" class="r" style="position:absolute;left:536px;top:512px;width:150px;height:180px;background:rgba(125,194,66,0.12);border:2px solid #7DC242;border-radius:4px;z-index:7;"></div>
-<div id="pub2-label" class="r" style="position:absolute;left:546px;top:504px;z-index:60;background:rgba(125,194,66,0.25);padding:0 4px;font-size:10px;color:#3F8624;">🔓 <b>パブリックサブネット</b></div>
-
-<!-- 下段：プライベートサブネット左 2 -->
-<div id="ps2-left-label" class="r" style="position:absolute;left:701px;top:504px;z-index:60;background:rgba(230,230,230,0.6);padding:0 4px;font-size:10px;color:#ea580c;">🔒 <b>プライベートサブネット</b></div>
-<div id="ps2-left-frame" class="r" style="position:absolute;left:696px;top:512px;width:447px;height:180px;background:rgba(200,200,200,0.25);border:2px solid #bbb;border-radius:4px;z-index:6;"></div>
-
-<!-- 下段：プライベートサブネット右 2 -->
-<div id="ps2-right-label" class="r" style="position:absolute;left:1156px;top:504px;z-index:60;background:rgba(230,230,230,0.6);padding:0 4px;font-size:10px;color:#ea580c;">🔒 <b>プライベートサブネット</b></div>
-<div id="ps2-right-frame" class="r" style="position:absolute;left:1151px;top:512px;width:150px;height:180px;background:rgba(200,200,200,0.25);border:2px solid #bbb;border-radius:4px;z-index:6;"></div>
-
-<!-- VPC内リソース -->
-<div id="network-fw" class="r b" style="left:544px;top:415px;width:130px;text-align:center;z-index:55;">ALB</div>
-<!-- ELB頂線枚（両AZのALBを囲む点線枠） -->
-<div id="elb-pub-border" class="r" style="position:absolute;left:538px;top:408px;width:142px;height:195px;border:2px dashed #d97706;border-radius:4px;z-index:9;pointer-events:none;"></div>
-<div id="elb-pub-label" class="r" style="position:absolute;left:609px;top:399px;z-index:61;background:rgba(255,255,255,0.9);padding:0 4px;font-size:10px;font-weight:bold;color:#d97706;transform:translateX(-50%);">ELB</div>
-<div id="elb" class="r b" style="left:852px;top:415px;width:130px;text-align:center;z-index:55;">ALB</div>
-<div id="vpc-flowlog" class="r b" style="left:852px;top:280px;width:130px;text-align:center;z-index:20;">VPCフローログ</div>
-<div id="vpc-endpoint" class="r b" style="left:852px;top:234px;width:130px;text-align:center;z-index:20;">VPC Endpoint</div>
-<!-- IGW（VPC左辺上に縦書きで配置） -->
-<div id="igw" class="r b" style="left:490px;top:391px;width:30px;height:80px;text-align:center;z-index:20;display:flex;align-items:center;justify-content:center;padding:2px;"><span style="writing-mode:vertical-rl;letter-spacing:1px;font-size:11px;font-weight:bold;">IGW</span></div>
-<!-- NGW（NATゲートウェイ，トグル可能） -->
-<div id="ngw" class="r b" style="left:544px;top:325px;width:130px;text-align:center;z-index:20;">NGW</div>
-<!-- ネットワークFW（上段） -->
-<div id="nfw" class="r b" style="left:544px;top:370px;width:130px;text-align:center;z-index:55;">ネットワークFW</div>
-
-<!-- ===== ④ コンピューティング（BE層, Compute） ===== -->
-<div style="position:absolute;left:992px;top:268px;width:148px;height:434px;border:2px solid #c07828;border-radius:4px;z-index:8;background:rgba(192,120,40,0.07);"></div>
-<div style="position:absolute;left:1066px;top:254px;z-index:60;background:rgba(192,120,40,0.15);padding:0 5px;font-size:11px;font-weight:bold;transform:translateX(-50%)">❹コンピューティング(BE)</div>
-<!-- ④ コンピューティング（FE層） -->
-<div style="position:absolute;left:698px;top:358px;width:140px;height:294px;border:2px solid #c07828;border-radius:4px;z-index:8;background:rgba(192,120,40,0.07);"></div>
-<div style="position:absolute;left:770px;top:344px;z-index:60;background:rgba(192,120,40,0.15);padding:0 5px;font-size:11px;font-weight:bold;transform:translateX(-50%)">❹コンピューティング(FE)</div>
-
-<!-- FE層リソース（ALB前段） -->
-<div id="fargate-fe" class="r b" style="left:703px;top:370px;width:130px;text-align:center;z-index:20;">Fargate</div>
-<div id="ec2-fe" class="r b" style="left:703px;top:415px;width:130px;text-align:center;z-index:20;">EC2</div>
-<div id="eks-fe" class="r b" style="left:703px;top:460px;width:130px;text-align:center;z-index:20;">EKS</div>
-<!-- ⑤内リソース（BE層） -->
-<div id="fargate" class="r b" style="left:1001px;top:370px;width:130px;text-align:center;z-index:20;">Fargate</div>
-<div id="ec2" class="r b" style="left:1001px;top:415px;width:130px;text-align:center;z-index:20;">EC2</div>
-<div id="eks" class="r b" style="left:1001px;top:460px;width:130px;text-align:center;z-index:20;">EKS</div>
-
-<!-- Lambda（⑤枠内、サブネット内） -->
-<div id="eni" class="r b" style="left:1001px;top:325px;width:130px;text-align:center;z-index:20;">ENI</div>
-<!-- Lambda（⑤枠内、サブネット外、VPCフローログの高さ） -->
-<div id="lambda2" class="r b" style="left:1001px;top:280px;width:130px;text-align:center;z-index:20;">Lambda</div>
-<!-- HA冗長化用 下段リソース（HA ON 時のみ表示） -->
-<div id="network-fw2" class="r b off" style="left:544px;top:560px;width:130px;text-align:center;z-index:55;">ALB</div>
-<div id="nfw2" class="r b off" style="left:544px;top:605px;width:130px;text-align:center;z-index:55;">ネットワークFW</div>
-<div id="ngw2" class="r b off" style="left:544px;top:650px;width:130px;text-align:center;z-index:20;">NGW</div>
-<div id="elb2" class="r b off" style="left:852px;top:560px;width:130px;text-align:center;z-index:55;">ALB</div>
-<div id="eni2" class="r b off" style="left:1001px;top:650px;width:130px;text-align:center;z-index:20;">ENI</div>
-<div id="fargate2" class="r b off" style="left:1001px;top:605px;width:130px;text-align:center;z-index:20;">Fargate</div>
-<div id="ec22" class="r b off" style="left:1001px;top:560px;width:130px;text-align:center;z-index:20;">EC2</div>
-<div id="eks2" class="r b off" style="left:1001px;top:515px;width:130px;text-align:center;z-index:20;">EKS</div>
-<!-- FE層下段（HA冗長化用） -->
-<div id="eks-fe2" class="r b off" style="left:703px;top:515px;width:130px;text-align:center;z-index:20;">EKS</div>
-<div id="ec2-fe2" class="r b off" style="left:703px;top:560px;width:130px;text-align:center;z-index:20;">EC2</div>
-<div id="fargate-fe2" class="r b off" style="left:703px;top:605px;width:130px;text-align:center;z-index:20;">Fargate</div>
-<div id="efs2" class="r b off" style="position:absolute;left:1166px;top:650px;width:130px;text-align:center;">EFS</div>
-<div id="elasticache2" class="r b off" style="position:absolute;left:1166px;top:605px;width:130px;text-align:center;">ElastiCache</div>
-<div id="aurora2" class="r b off" style="position:absolute;left:1166px;top:560px;width:130px;text-align:center;">Aurora</div>
-<div id="rds2" class="r b off" style="position:absolute;left:1166px;top:515px;width:130px;text-align:center;">RDS</div>
-</div><!-- cv -->
-</div>
-</div>
-
-<script>
-const S={};
-document.querySelectorAll('.tb').forEach(b=>{
-  if(b.dataset.rs){b.dataset.rs.split(',').forEach(id=>{S[id]=true;});}
-  else{S[b.dataset.r]=true;}
-});
-
-let haEnabled=false;
-let feLayerEnabled=true;
-// FE層リソースと対応するBEリソースのマッピング
-const feMap={'fargate-fe':'fargate','ec2-fe':'ec2','eks-fe':'eks'};
-function updateFEResources(){
-  Object.entries(feMap).forEach(([feid,beid])=>{
-    const el=document.getElementById(feid);if(!el)return;
-    const show=feLayerEnabled&&S[beid]!==false;
-    S[feid]=show;
-    if(show)el.classList.remove('off');else el.classList.add('off');
-  });
-  // ALB(内部) はFE層と連動
-  const elbEl=document.getElementById('elb');
-  if(elbEl){S['elb']=feLayerEnabled;if(feLayerEnabled)elbEl.classList.remove('off');else elbEl.classList.add('off');}
-}
-// WAF表示制御: 各WAFは対応サービスがONの時のみ表示
-// aws-waf3はALB(公開)=network-fwがある時のみ表示
-const wafPairs=[['aws-waf','cloudfront'],['aws-waf2','api-gateway'],['aws-waf3','network-fw']];
-function updateWAFResources(){
-  wafPairs.forEach(([wafId,svcId])=>{
-    const el=document.getElementById(wafId);if(!el)return;
-    const show=S[wafId]!==false&&S[svcId]!==false;
-    if(show)el.classList.remove('off');else el.classList.add('off');
-  });
-}
-const haLowerIds=['ngw2','network-fw2','nfw2','elb2','eni2','fargate2','ec22','eks2','efs2','elasticache2','aurora2','rds2','fargate-fe2','ec2-fe2','eks-fe2'];
-const haMap={'ngw2':'ngw','network-fw2':'network-fw','nfw2':'nfw','elb2':'elb','eni2':'eni','fargate2':'fargate','ec22':'ec2','eks2':'eks','efs2':'efs','elasticache2':'elasticache','aurora2':'aurora','rds2':'rds','fargate-fe2':'fargate-fe','ec2-fe2':'ec2-fe','eks-fe2':'eks-fe'};
-haLowerIds.forEach(id=>{S[id]=false;});
-
-function updateHAResources(){
-  haLowerIds.forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el)return;
-    const show=haEnabled&&S[haMap[id]]!==false;
-    S[id]=show;
-    if(show)el.classList.remove('off');else el.classList.add('off');
-  });
-  draw();
-}
-
-// 個人制作ツール用接続定義: [from, to, fromSide, toSide, dashed]
-// r=右辺 l=左辺 t=上辺 b=下辺
-const C=[
-  // 外部接続
-  ['admin','mgmt-console','r','l',false],
-  ['user','internet','r','l',false],
-  ['system','internet','r','l',false],
-  // インターネット→IGW/Route53（WAF経由は動的制御）
-  ['internet','route53','r','l',false],
-  // IGW → ALB(公開)上段・下段（HAあり時）
-  ['igw','network-fw','r','l',false,false],
-  ['igw','network-fw2','r','l',false,false],
-  ['mgmt-console','s3','r','l',false,'top'],
-  // CI/CD
-  ['github','codecommit','r','l',false,false],
-  ['gitlab','codecommit','r','l',false,false],
-  ['codecommit','codebuild','r','l',false,false],
-  ['codebuild','codedeploy','r','l',false,false],
-  ['codedeploy','ecs','r','l',false,false],
-  ['ecs','fargate','b','t',false],
-  ['ecs','fargate-fe','b','t',false],
-  ['ecs','fargate2','b','t',false],
-  ['ecs','fargate-fe2','b','t',false],
-  ['ecr','ecs','l','r',false,false],
-  // ① システム管理
-  ['mgmt-console','session-mgr','r','l',true,false],
-  // セッションマネージャー→EC2(BE上下段)とEC2(FE上下段)
-  ['session-mgr','ec2','b','t',true,false],
-  ['session-mgr','ec22','b','t',true,false],
-  ['session-mgr','ec2-fe','b','t',true,false],
-  ['session-mgr','ec2-fe2','b','t',true,false],
-  // CloudFront→S3, TransferSFTP→S3
-  ['cloudfront','s3','r','l',false,'top'],
-  // ③ ネットワークフロー（WAF履歴は draw()内の動的ルーティングで制御）
-  // CloudFront → IGW（下辺→左辺）
-  ['cloudfront','igw','b','l',false],
-
-  ['api-gateway','lambda2','r','l',false,'top'],
-  // ALB公開 → FE層 → ALB内部 → BE層
-  ['network-fw','fargate-fe','r','l',false,false],
-  ['network-fw','ec2-fe','r','l',false,false],
-  ['network-fw','eks-fe','r','l',false,false],
-  ['fargate-fe','elb','r','l',false,false],
-  ['ec2-fe','elb','r','l',false,false],
-  ['eks-fe','elb','r','l',false,false],
-  ['elb','lambda2','r','l',false,false],
-  ['elb','fargate','r','l',false,false],
-  ['elb','ec2','r','l',false,false],
-  ['elb','eks','r','l',false,false],
-  // コンピューティング(BE) → データストア（EC2）
-  ['ec2','dynamodb','r','l',false,false],['ec2','s3','r','l',false,false],
-  ['ec2','efs','r','l',false,false],['ec2','elasticache','r','l',false,false],['ec2','aurora','r','l',false,false],['ec2','rds','r','l',false,false],
-  // コンピューティング(BE) → データストア（Fargate）
-  ['fargate','dynamodb','r','l',false,false],['fargate','s3','r','l',false,false],
-  ['fargate','efs','r','l',false,false],['fargate','elasticache','r','l',false,false],['fargate','aurora','r','l',false,false],['fargate','rds','r','l',false,false],
-  // コンピューティング(BE) → データストア（EKS）
-  ['eks','dynamodb','r','l',false,false],['eks','s3','r','l',false,false],
-  ['eks','efs','r','l',false,false],['eks','elasticache','r','l',false,false],['eks','aurora','r','l',false,false],['eks','rds','r','l',false,false],
-  // Lambda(外)→DynamoDBのみ、ENIへ
-  ['lambda2','dynamodb','r','l',false,false],
-  ['lambda2','eni','b','t',false,false],
-  // ENI→Aurora,RDS
-  ['eni','aurora','r','l',false,false],['eni','rds','r','l',false,false],
-  // VPCフローログ → VPC Endpoint → S3
-  ['vpc-flowlog','vpc-endpoint','t','b',false,false],
-  ['vpc-endpoint','s3','t','l',false,'top'],
-  // HA冗長化（下段）リソース接続
-  ['elb2','eni2','r','l',false,false],
-  ['elb2','fargate2','r','l',false,false],
-  ['elb2','ec22','r','l',false,false],
-  ['elb2','eks2','r','l',false,false],
-  // ALB公開下段 → FE2 → ALB内部下段 → BE2
-  ['network-fw2','fargate-fe2','r','l',false,false],
-  ['network-fw2','ec2-fe2','r','l',false,false],
-  ['network-fw2','eks-fe2','r','l',false,false],
-  ['fargate-fe2','elb2','r','l',false,false],
-  ['ec2-fe2','elb2','r','l',false,false],
-  ['eks-fe2','elb2','r','l',false,false],
-
-  ['ec22','dynamodb','r','l',false,false],['ec22','s3','r','l',false,false],
-  ['ec22','efs2','r','l',false,false],['ec22','elasticache2','r','l',false,false],['ec22','aurora2','r','l',false,false],['ec22','rds2','r','l',false,false],
-  ['fargate2','dynamodb','r','l',false,false],['fargate2','s3','r','l',false,false],
-  ['fargate2','efs2','r','l',false,false],['fargate2','elasticache2','r','l',false,false],['fargate2','aurora2','r','l',false,false],['fargate2','rds2','r','l',false,false],
-  ['eks2','dynamodb','r','l',false,false],['eks2','s3','r','l',false,false],
-  ['eks2','efs2','r','l',false,false],['eks2','elasticache2','r','l',false,false],['eks2','aurora2','r','l',false,false],['eks2','rds2','r','l',false,false],
-  ['eni2','aurora2','r','l',false,false],['eni2','rds2','r','l',false,false],
-];
-
-function pt(el,side,other){
-  const r=el.getBoundingClientRect(),cr=document.getElementById('cv').getBoundingClientRect();
-  const cx=r.left+r.width/2-cr.left, cy=r.top+r.height/2-cr.top;
-  if(side==='r')return{x:r.right-cr.left,y:cy};
-  if(side==='l')return{x:r.left-cr.left,y:cy};
-  if(side==='t')return{x:cx,y:r.top-cr.top};
-  if(side==='b')return{x:cx,y:r.bottom-cr.top};
-  // auto
-  const o=other.getBoundingClientRect();
-  const ox=o.left+o.width/2-cr.left, oy=o.top+o.height/2-cr.top;
-  const dx=ox-cx, dy=oy-cy;
-  if(Math.abs(dx)<2&&Math.abs(dy)<2)return{x:cx,y:cy};
-  const hw=r.width/2, hh=r.height/2;
-  const rx=Math.abs(dx)/hw, ry=Math.abs(dy)/hh;
-  if(rx>ry){
-    return{x:dx>0?r.right-cr.left:r.left-cr.left, y:cy+dy*(hw/Math.abs(dx))};
-  } else {
-    return{x:cx+dx*(hh/Math.abs(dy)), y:dy>0?r.bottom-cr.top:r.top-cr.top};
-  }
-}
-
-function draw(){
-  ['svg','svg2','svg3'].forEach(id=>document.getElementById(id).querySelectorAll('line').forEach(l=>l.remove()));
-  const svg3=document.getElementById('svg3');
-  function addLine(fid,tid,fs,ts,dash){
-    const fe=document.getElementById(fid),te=document.getElementById(tid);
-    if(!fe||!te)return;
-    const fp=pt(fe,fs,te), tp=pt(te,ts,fe);
-    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1',fp.x);line.setAttribute('y1',fp.y);
-    line.setAttribute('x2',tp.x);line.setAttribute('y2',tp.y);
-    line.setAttribute('stroke','#444');
-    line.setAttribute('stroke-width',dash?'1.2':'1.5');
-    if(dash)line.setAttribute('stroke-dasharray','6,4');
-    line.setAttribute('marker-end','url(#ah3)');
-    if(S[fid]===false||S[tid]===false)line.classList.add('off');
-    svg3.appendChild(line);
-  }
-  C.forEach(([fid,tid,fs,ts,dash])=>addLine(fid,tid,fs,ts,dash));
-  // WAF表示状態を都度同期
-  updateWAFResources();
-  // WAF有無による動的ルーティング
-  const wafOn=S['aws-waf']!==false;
-  // CloudFront系
-  if(wafOn&&S['cloudfront']!==false&&S['aws-waf']!==false){
-    addLine('internet','aws-waf','r','l',false);
-    addLine('aws-waf','cloudfront','r','l',false);
-  } else if(S['cloudfront']!==false){
-    addLine('internet','cloudfront','r','l',false);
-  }
-  // APIゲートウェイ系
-  if(wafOn&&S['api-gateway']!==false&&S['aws-waf2']!==false){
-    addLine('internet','aws-waf2','r','l',false);
-    addLine('aws-waf2','api-gateway','r','l',false);
-  } else if(S['api-gateway']!==false){
-    addLine('internet','api-gateway','r','l',false);
-  }
-  // IGW系（aws-waf3はALB公開がある時のみ。ALB公開なしでもIGWは表示）
-  if(wafOn&&S['network-fw']!==false&&S['aws-waf3']!==false&&S['igw']!==false){
-    addLine('internet','aws-waf3','r','l',false);
-    addLine('aws-waf3','igw','r','l',false);
-  } else if(S['igw']!==false){
-    addLine('internet','igw','r','l',false);
-  }
-  // CodePipeline OFF時: GitHub/GitLab → ECS直接
-  if(S['codecommit']===false){
-    if(S['ecs']!==false){
-      addLine('github','ecs','r','l',false);
-      addLine('gitlab','ecs','r','l',false);
-    }
-  }
-  // FE層+ALB内部なし時の直接接続（上段）
-  if(!feLayerEnabled){
-    if(S['network-fw']!==false){
-      if(S['ec2']!==false) addLine('network-fw','ec2','r','l',false);
-    } else {
-      if(S['ec2']!==false) addLine('igw','ec2','r','l',false);
-    }
-    // FE層なし時の直接接続（下段HA）
-    if(haEnabled){
-      if(S['network-fw2']!==false){
-        if(S['ec22']!==false) addLine('network-fw2','ec22','r','l',false);
-      } else {
-        if(S['ec22']!==false) addLine('igw','ec22','r','l',false);
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Architecture Diagram Tool for AWS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
       }
-    }
-  }
-}
-
-setTimeout(draw,120);
-window.addEventListener('resize',draw);
-
-document.querySelectorAll('.tb').forEach(b=>{
-  b.addEventListener('click',()=>{
-    const d=b.querySelector('.dot');
-    if(b.dataset.rs){
-      const ids=b.dataset.rs.split(',');
-      const anyOn=ids.some(id=>S[id]!==false);
-      ids.forEach(id=>{S[id]=!anyOn;const el=document.getElementById(id);if(!anyOn)el.classList.remove('off');else el.classList.add('off');});
-      d.style.color=anyOn?'#ef4444':'#22c55e';b.style.opacity=anyOn?'.5':'1';
-    } else {
-      const id=b.dataset.r,el=document.getElementById(id);
-      S[id]=!S[id];
-      if(S[id]){el.classList.remove('off');d.style.color='#22c55e';b.style.opacity='1';}
-      else{el.classList.add('off');d.style.color='#ef4444';b.style.opacity='.5';}
-    }
-    updateFEResources();
-    updateWAFResources();
-    updateHAResources();
-    draw();
-  });
-});
-document.getElementById('fe-btn').addEventListener('click',()=>{
-  feLayerEnabled=!feLayerEnabled;
-  const d=document.getElementById('fe-btn').querySelector('.dot');
-  d.style.color=feLayerEnabled?'#22c55e':'#ef4444';
-  document.getElementById('fe-btn').style.opacity=feLayerEnabled?'1':'.5';
-  updateFEResources();updateWAFResources();updateHAResources();draw();
-});
-document.getElementById('sa').addEventListener('click',()=>{
-  document.querySelectorAll('.tb').forEach(b=>{
-    if(b.dataset.rs){b.dataset.rs.split(',').forEach(id=>{
-      if(haLowerIds.includes(id))return;
-      S[id]=true;document.getElementById(id).classList.remove('off');
-    });}
-    else{const id=b.dataset.r;
-      if(id&&!haLowerIds.includes(id)){S[id]=true;document.getElementById(id).classList.remove('off');}
-    }
-    b.querySelector('.dot').style.color='#22c55e';b.style.opacity='1';
-  });
-  feLayerEnabled=true;
-  document.getElementById('fe-btn').querySelector('.dot').style.color='#22c55e';
-  document.getElementById('fe-btn').style.opacity='1';
-  updateFEResources();updateWAFResources();updateHAResources();draw();
-});
-document.getElementById('ha').addEventListener('click',()=>{
-  document.querySelectorAll('.tb').forEach(b=>{
-    if(b.dataset.rs){b.dataset.rs.split(',').forEach(id=>{
-      if(haLowerIds.includes(id))return;
-      S[id]=false;document.getElementById(id).classList.add('off');
-    });}
-    else{const id=b.dataset.r;
-      if(id&&!haLowerIds.includes(id)){S[id]=false;document.getElementById(id).classList.add('off');}
-    }
-    b.querySelector('.dot').style.color='#ef4444';b.style.opacity='.5';
-  });
-  feLayerEnabled=false;
-  document.getElementById('fe-btn').querySelector('.dot').style.color='#ef4444';
-  document.getElementById('fe-btn').style.opacity='.5';
-  updateFEResources();updateWAFResources();updateHAResources();draw();
-});
-
-let psPublic=false;
-
-// URL state sharing
-function encodeState(){
-  const bits=[];
-  document.querySelectorAll('.tb').forEach(b=>{
-    if(b.dataset.rs){b.dataset.rs.split(',').forEach(id=>{bits.push(id+':'+(S[id]?'1':'0'));});}
-    else{bits.push(b.dataset.r+':'+(S[b.dataset.r]?'1':'0'));}
-  });
-  bits.push('_ps:'+(psPublic?'1':'0'));
-  bits.push('_fe:'+(feLayerEnabled?'1':'0'));
-  bits.push('_ha:'+(haEnabled?'1':'0'));
-  return btoa(bits.join(','));
-}
-function applyState(b64){
-  try{
-    const pairs=atob(b64).split(',');
-    pairs.forEach(p=>{
-      const [k,v]=p.split(':');
-      if(k==='_ps'){
-        if((v==='1')!==psPublic) document.getElementById('pst').click();
-        return;
+      body {
+        overflow: auto;
+        margin: 0;
+        padding: 10px;
+        background: #fff;
+        font-family: "Segoe UI", sans-serif;
       }
-      if(k==='_fe'){
-        if((v==='1')!==feLayerEnabled) document.getElementById('fe-btn').click();
-        return;
+      .r {
+        transition: opacity 0.3s;
       }
-      if(k==='_ha'){
-        const want=v==='1';
-        if(want!==haEnabled) document.getElementById('ha-btn').click();
-        return;
+      .r.off,
+      .absolute.off,
+      .text-center.off {
+        opacity: 0;
+        pointer-events: none;
       }
-      S[k]=(v==='1');
-      const el=document.getElementById(k);
-      const btn=document.querySelector('.tb[data-r="'+k+'"]');
-      if(el&&btn){
-        if(S[k]){el.classList.remove('off');btn.querySelector('.dot').style.color='#22c55e';btn.style.opacity='1';}
-        else{el.classList.add('off');btn.querySelector('.dot').style.color='#ef4444';btn.style.opacity='.5';}
-      } else if(el){
-        if(S[k])el.classList.remove('off');else el.classList.add('off');
+      .b {
+        border: 2px solid #555;
+        background: #fff;
+        padding: 5px 13px;
+        font-size: 12px;
+        white-space: nowrap;
+        position: absolute;
+        z-index: 20;
       }
-    });
-    document.querySelectorAll('.tb[data-rs]').forEach(b=>{
-      const ids=b.dataset.rs.split(',');
-      const allOn=ids.every(id=>S[id]!==false);
-      b.querySelector('.dot').style.color=allOn?'#22c55e':'#ef4444';
-      b.style.opacity=allOn?'1':'.5';
-    });
-    draw();
-  }catch(e){}
-}
-const sp=new URLSearchParams(location.search);
-if(sp.has('s'))setTimeout(()=>applyState(sp.get('s')),150);
+      svg line {
+        transition: opacity 0.3s;
+      }
+      svg line.off {
+        opacity: 0;
+      }
+      .tb {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        text-align: left;
+        padding: 1px 4px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-size: 11px;
+        border-radius: 2px;
+        white-space: nowrap;
+      }
+      .tb:hover {
+        background: #eee;
+      }
+      .dot {
+        color: #22c55e;
+        font-size: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="mob-warn"
+      style="
+        display: none;
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        font-size: 13px;
+        text-align: center;
+      "
+    >
+      ⚠️ This tool is best viewed on a desktop (width >= 1400px). It may not display correctly on phones or tablets.
+    </div>
+    <script>
+      if (window.innerWidth < 1024)
+        document.getElementById("mob-warn").style.display = "block";
+      function resetToDefault() {
+        location.href = location.pathname;
+      }
+    </script>
+    <div
+      style="
+        padding: 8px 16px;
+        background: #232f3e;
+        color: #fff;
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        cursor: pointer;
+      "
+      onclick="resetToDefault()"
+    >
+      Simple Architecture Diagram Tool for AWS
+    </div>
+    <div style="display: flex; gap: 6px">
+      <!-- Sidebar: Resource control panel -->
+      <div style="width: 155px; flex-shrink: 0; font-size: 11px">
+        <div style="font-weight: bold; margin-bottom: 5px; font-size: 13px">
+          Resource Controls
+        </div>
+        <div
+          style="
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px;
+            margin-bottom: 3px;
+          "
+        >
+          <div
+            style="
+              font-weight: bold;
+              color: #c06080;
+              font-size: 11px;
+              margin-bottom: 2px;
+            "
+          >
+            1 System Management
+          </div>
+          <button class="tb" data-r="session-mgr">
+            Session Manager<span class="dot">●</span>
+          </button>
+        </div>
+        <div
+          style="
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px;
+            margin-bottom: 3px;
+          "
+        >
+          <div
+            style="
+              font-weight: bold;
+              color: #5c9040;
+              font-size: 11px;
+              margin-bottom: 2px;
+            "
+          >
+            2 Data Store
+          </div>
+          <button class="tb" data-r="aurora">
+            Aurora<span class="dot">●</span>
+          </button>
+          <button class="tb" data-r="dynamodb">
+            DynamoDB<span class="dot">●</span>
+          </button>
+          <button class="tb" data-r="efs">EFS<span class="dot">●</span></button>
+          <button class="tb" data-r="elasticache">
+            ElastiCache<span class="dot">●</span>
+          </button>
+          <button class="tb" data-r="rds">RDS<span class="dot">●</span></button>
+        </div>
+        <div
+          style="
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px;
+            margin-bottom: 3px;
+          "
+        >
+          <div
+            style="
+              font-weight: bold;
+              color: #7060b0;
+              font-size: 11px;
+              margin-bottom: 2px;
+            "
+          >
+            3 Networking
+          </div>
+          <button class="tb" data-r="acm">ACM<span class="dot">●</span></button>
+          <button class="tb" data-rs="network-fw,elb-pub-border,elb-pub-label">
+            ALB<span class="dot">●</span>
+          </button>
+          <button class="tb" data-r="api-gateway">
+            API Gateway<span class="dot">●</span>
+          </button>
+          <button class="tb" data-r="cloudfront">
+            CloudFront<span class="dot">●</span>
+          </button>
+          <button class="tb" data-r="ngw">
+            NAT Gateway<span class="dot">●</span>
+          </button>
+          <button class="tb" data-r="nfw">
+            Network Firewall<span class="dot">●</span>
+          </button>
+          <button
+            class="tb"
+            data-rs="vpc-frame,vpc-label,igw,vpc-endpoint,vpc-flowlog,route53-vpc,ps-left-label,ps-left-frame,ps-right-label,ps-right-frame,pub-frame,pub-label,pub2-frame,pub2-label,ps2-left-frame,ps2-left-label,ps2-right-frame,ps2-right-label,az-a,az-b"
+          >
+            VPC Internal<span class="dot">●</span>
+          </button>
+          <button class="tb" data-r="aws-waf">
+            WAF<span class="dot">●</span>
+          </button>
+        </div>
+        <div
+          style="
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px;
+            margin-bottom: 3px;
+          "
+        >
+          <div
+            style="
+              font-weight: bold;
+              color: #c07828;
+              font-size: 11px;
+              margin-bottom: 2px;
+            "
+          >
+            4 Computing
+          </div>
+          <button id="fe-btn" class="tb">
+            FE layer + ALB (internal)<span class="dot" style="color: #22c55e">●</span>
+          </button>
+          <button class="tb" data-rs="ec2">
+            EC2 ⇄ Fargate<span class="dot">●</span>
+          </button>
+          <button id="lambda-vpc-toggle" class="tb" data-r="eni">
+              Lambda ⇄ VPC Lambda<span class="dot">●</span>
+          </button>
+        </div>
+        <div
+          style="
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px;
+            margin-bottom: 3px;
+          "
+        >
+          <div
+            style="
+              font-weight: bold;
+              color: #b05050;
+              font-size: 11px;
+              margin-bottom: 2px;
+            "
+          >
+            5 CI/CD
+          </div>
+          <button
+            class="tb"
+            data-rs="codecommit,codebuild,codedeploy,cp-frame,cp-label"
+          >
+            CodePipeline<span class="dot">●</span>
+          </button>
+          <button class="tb" data-r="ecr">ECR<span class="dot">●</span></button>
+          <button class="tb" data-r="ecs">ECS<span class="dot">●</span></button>
+          <button id="git-toggle" class="tb">GitHub ⇄ GitLab<span class="dot">●</span></button>
+        </div>
+        <button
+          id="ha-btn"
+          style="
+            width: 100%;
+            padding: 4px;
+            background: #7c3aed;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 3px;
+          "
+        >
+          HA/Redundancy (OFF)
+        </button>
+        <button
+          id="sa"
+          style="
+            width: 100%;
+            padding: 4px;
+            background: #22c55e;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 3px;
+          "
+        >
+          Show All
+        </button>
+        <button
+          id="ha"
+          style="
+            width: 100%;
+            padding: 4px;
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+          "
+        >
+          Hide All
+        </button>
+        <!-- Private to Public Subnet button removed -->
+      </div>
 
-document.getElementById('cp').addEventListener('click',()=>{
-  const u=new URL(location.href);
-  u.searchParams.set('s',encodeState());
-  navigator.clipboard.writeText(u.toString()).then(()=>{
-    const b=document.getElementById('cp');b.textContent='\u2705 コピー完了!';
-    setTimeout(()=>{b.textContent='\ud83d\udccb URL共有';},2000);
-  }).catch(()=>{
-    const u2=new URL(location.href);u2.searchParams.set('s',encodeState());
-    prompt('URLをコピーしてください:',u2.toString());
-  });
-});
+      <!-- Main diagram area -->
+      <div style="flex: 1; min-width: 1340px">
+        <div
+          id="cv"
+          style="
+            position: relative;
+            width: 1340px;
+            height: 780px;
+            border: 3px solid #222;
+            border-radius: 4px;
+            background: #fff;
+          "
+        >
+          <!-- Top-right tool buttons (presets, share, copy) -->
+          <div
+            style="
+              position: absolute;
+              top: 8px;
+              right: 20px;
+              z-index: 70;
+              display: flex;
+              flex-direction: row;
+              gap: 6px;
+              align-items: flex-start;
+            "
+          >
+            <!-- Preset template buttons (EC2/ECS/Lambda setups) -->
+            <div style="display: flex; flex-direction: column; gap: 3px">
+              <a
+                href="?s=c2Vzc2lvbi1tZ3I6MSxhdXJvcmE6MSxkeW5hbW9kYjowLGVmczowLGVsYXN0aWNhY2hlOjAscmRzOjAsYWNtOjAsbmV0d29yay1mdzowLGVsYi1wdWItYm9yZGVyOjAsZWxiLXB1Yi1sYWJlbDowLGVsYjowLGVsYjI6MCxlbGItaW50LWJvcmRlcjowLGVsYi1pbnQtbGFiZWw6MCxhcGktZ2F0ZXdheTowLGNsb3VkZnJvbnQ6MCxuZ3c6MCxuZnc6MCx2cGMtZnJhbWU6MSx2cGMtbGFiZWw6MSxpZ3c6MSx2cGMtZW5kcG9pbnQ6MSx2cGMtZmxvd2xvZzoxLHJvdXRlNTMtdnBjOjEscHMtbGVmdC1sYWJlbDoxLHBzLWxlZnQtZnJhbWU6MSxwcy1yaWdodC1sYWJlbDoxLHBzLXJpZ2h0LWZyYW1lOjEscHViLWZyYW1lOjEscHViLWxhYmVsOjEscHViMi1mcmFtZToxLHB1YjItbGFiZWw6MSxwczItbGVmdC1mcmFtZToxLHBzMi1sZWZ0LWxhYmVsOjEscHMyLXJpZ2h0LWZyYW1lOjEscHMyLXJpZ2h0LWxhYmVsOjEsYXotYToxLGF6LWI6MSxhd3Mtd2FmOjAsdW5kZWZpbmVkOjAsZWMyOjEsZW5pOjAsY29kZWNvbW1pdDowLGNvZGVidWlsZDowLGNvZGVkZXBsb3k6MCxjcC1mcmFtZTowLGNwLWxhYmVsOjAsZWNyOjAsZWNzOjAsdW5kZWZpbmVkOjAsbGFtYmRhOjAsbGFtYmRhMjowLGVuaTowLGdpdGh1YjoxLGdpdGxhYjowLF9wczowLF9mZTowLF9oYTow"
+                style="
+                  padding: 4px 9px;
+                  background: #475569;
+                  color: #fff;
+                  border-radius: 4px;
+                  font-size: 11px;
+                  font-weight: bold;
+                  text-decoration: none;
+                  display: block;
+                  text-align: center;
+                  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                "
+                >EC2 Setup</a
+              >
+              <a
+                href="?s=c2Vzc2lvbi1tZ3I6MSxhdXJvcmE6MSxkeW5hbW9kYjowLGVmczowLGVsYXN0aWNhY2hlOjEscmRzOjAsYWNtOjEsbmV0d29yay1mdzoxLGVsYi1wdWItYm9yZGVyOjEsZWxiLXB1Yi1sYWJlbDoxLGVsYjoxLGVsYjI6MCxlbGItaW50LWJvcmRlcjoxLGVsYi1pbnQtbGFiZWw6MSxhcGktZ2F0ZXdheTowLGNsb3VkZnJvbnQ6MCxuZ3c6MSxuZnc6MCx2cGMtZnJhbWU6MSx2cGMtbGFiZWw6MSxpZ3c6MSx2cGMtZW5kcG9pbnQ6MSx2cGMtZmxvd2xvZzoxLHJvdXRlNTMtdnBjOjEscHMtbGVmdC1sYWJlbDoxLHBzLWxlZnQtZnJhbWU6MSxwcy1yaWdodC1sYWJlbDoxLHBzLXJpZ2h0LWZyYW1lOjEscHViLWZyYW1lOjEscHViLWxhYmVsOjEscHViMi1mcmFtZToxLHB1YjItbGFiZWw6MSxwczItbGVmdC1mcmFtZToxLHBzMi1sZWZ0LWxhYmVsOjEscHMyLXJpZ2h0LWZyYW1lOjEscHMyLXJpZ2h0LWxhYmVsOjEsYXotYToxLGF6LWI6MSxhd3Mtd2FmOjEsdW5kZWZpbmVkOjEsZWMyOjEsZW5pOjAsY29kZWNvbW1pdDoxLGNvZGVidWlsZDoxLGNvZGVkZXBsb3k6MSxjcC1mcmFtZToxLGNwLWxhYmVsOjEsZWNyOjEsZWNzOjEsdW5kZWZpbmVkOjEsbGFtYmRhOjAsbGFtYmRhMjowLGVuaTowLGdpdGh1YjoxLGdpdGxhYjowLF9wczowLF9mZToxLF9oYTow"
+                style="
+                  padding: 4px 9px;
+                  background: #475569;
+                  color: #fff;
+                  border-radius: 4px;
+                  font-size: 11px;
+                  font-weight: bold;
+                  text-decoration: none;
+                  display: block;
+                  text-align: center;
+                  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                "
+                >ECS Setup</a
+              >
+              <a
+                href="?s=c2Vzc2lvbi1tZ3I6MCxhdXJvcmE6MSxkeW5hbW9kYjoxLGVmczowLGVsYXN0aWNhY2hlOjAscmRzOjAsYWNtOjEsbmV0d29yay1mdzowLGVsYi1wdWItYm9yZGVyOjAsZWxiLXB1Yi1sYWJlbDowLGFwaS1nYXRld2F5OjEsYXdzLXdhZjoxLGF3cy13YWYyOjEsYXdzLXdhZjM6MSxjbG91ZGZyb250OjEsbmd3OjEsbmZ3OjAsdnBjLWZyYW1lOjEsdnBjLWxhYmVsOjEsaWd3OjEsdnBjLWVuZHBvaW50OjEsdnBjLWZsb3dsb2c6MSxyb3V0ZTUzLXZwYzoxLHBzLWxlZnQtbGFiZWw6MSxwcy1sZWZ0LWZyYW1lOjEscHMtcmlnaHQtbGFiZWw6MSxwcy1yaWdodC1mcmFtZToxLHB1Yi1mcmFtZToxLHB1Yi1sYWJlbDoxLHB1YjItZnJhbWU6MSxwdWIyLWxhYmVsOjEscHMyLWxlZnQtZnJhbWU6MSxwczItbGVmdC1sYWJlbDoxLHBzMi1yaWdodC1mcmFtZToxLHBzMi1yaWdodC1sYWJlbDoxLGF6LWE6MSxhei1iOjEsdW5kZWZpbmVkOjAsZWMyOjAsZWtzOjAsZW5pOjEsZmFyZ2F0ZTowLGxhbWJkYTI6MSxjb2RlY29tbWl0OjAsY29kZWJ1aWxkOjAsY29kZWRlcGxveTowLGNwLWZyYW1lOjAsY3AtbGFiZWw6MCxlY3I6MSxlY3M6MCxfcHM6MCxfZmU6MCxfaGE6MA%3D%3D"
+                style="
+                  padding: 4px 9px;
+                  background: #475569;
+                  color: #fff;
+                  border-radius: 4px;
+                  font-size: 11px;
+                  font-weight: bold;
+                  text-decoration: none;
+                  display: block;
+                  text-align: center;
+                  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                "
+                >Lambda Setup</a
+              >
+            </div>
+            <!-- Preset templates and share/copy buttons -->
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <button
+                id="cp"
+                style="
+                  padding: 5px 10px;
+                  background: #6366f1;
+                  color: #fff;
+                  border: none;
+                  border-radius: 4px;
+                  font-size: 13px;
+                  font-weight: bold;
+                  cursor: pointer;
+                  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                "
+                title="Copy shareable URL to clipboard"
+              >
+                Share URL
+              </button>
+              <button
+                id="imgcp"
+                style="
+                  padding: 5px 10px;
+                  background: #0ea5e9;
+                  color: #fff;
+                  border: none;
+                  border-radius: 4px;
+                  font-size: 13px;
+                  font-weight: bold;
+                  cursor: pointer;
+                  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                "
+                title="Copy diagram image to clipboard"
+              >
+                Copy Diagram
+              </button>
+            </div>
+          </div>
 
-// 図をクリップボードにコピー
-document.getElementById('imgcp').addEventListener('click',()=>{
-  html2canvas(document.getElementById('cv'),{scale:2,useCORS:true}).then(canvas=>{
-    canvas.toBlob(blob=>{
-      navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(()=>{
-        const b=document.getElementById('imgcp');b.textContent='\u2705 コピー完了!';
-        setTimeout(()=>{b.textContent='\ud83d\udcf8 図をコピー';},2000);
-      }).catch(()=>{
-        const url=canvas.toDataURL();
-        window.open(url,'_blank');
+          <svg
+            id="svg2"
+            style="
+              position: absolute;
+              inset: 0;
+              width: 100%;
+              height: 100%;
+              z-index: 9995;
+              pointer-events: none;
+            "
+          >
+            <defs>
+              <marker
+                id="ah2"
+                markerWidth="8"
+                markerHeight="6"
+                refX="7"
+                refY="3"
+                orient="auto"
+              >
+                <polygon points="0 0,8 3,0 6" fill="#444" />
+              </marker>
+            </defs>
+          </svg>
+
+          <svg
+            id="svg"
+            style="
+              position: absolute;
+              inset: 0;
+              width: 100%;
+              height: 100%;
+              z-index: 9997;
+              pointer-events: none;
+            "
+          >
+            <defs>
+              <marker
+                id="ah"
+                markerWidth="8"
+                markerHeight="6"
+                refX="7"
+                refY="3"
+                orient="auto"
+              >
+                <polygon points="0 0,8 3,0 6" fill="#444" />
+              </marker>
+            </defs>
+          </svg>
+
+          <svg
+            id="svg3"
+            style="
+              position: absolute;
+              inset: 0;
+              width: 100%;
+              height: 100%;
+              z-index: 9999;
+              pointer-events: none;
+            "
+          >
+            <defs>
+              <marker
+                id="ah3"
+                markerWidth="8"
+                markerHeight="6"
+                refX="7"
+                refY="3"
+                orient="auto"
+              >
+                <polygon points="0 0,8 3,0 6" fill="#444" />
+              </marker>
+            </defs>
+          </svg>
+
+          <!-- External users (Dev/Ops, GitHub, GitLab, User, System) -->
+          <div
+            id="admin"
+            class="absolute text-center"
+            style="
+              position: absolute;
+              text-align: center;
+              left: 15px;
+              top: 80px;
+              z-index: 20;
+            "
+          >
+            <div style="font-size: 24px">👥</div>
+            <div style="font-size: 10px; font-weight: 600">Dev/Ops</div>
+          </div>
+          <div
+            id="github"
+            class="absolute text-center"
+            style="
+              position: absolute;
+              text-align: center;
+              left: 15px;
+              top: 146px;
+              z-index: 20;
+            "
+          >
+            <div style="font-size: 22px">🐙</div>
+            <div style="font-size: 10px; font-weight: 600">GitHub</div>
+          </div>
+          <div
+            id="gitlab"
+            class="absolute text-center"
+            style="
+              position: absolute;
+              text-align: center;
+              left: 15px;
+              top: 146px;
+              z-index: 20;
+            "
+          >
+            <div style="font-size: 22px">🦊</div>
+            <div style="font-size: 10px; font-weight: 600">GitLab</div>
+          </div>
+          <div
+            id="user"
+            class="absolute text-center"
+            style="
+              position: absolute;
+              text-align: center;
+              left: 15px;
+              top: 380px;
+              z-index: 20;
+            "
+          >
+            <div style="font-size: 24px">👥</div>
+              <div style="font-size: 10px; font-weight: 600">User</div>
+          </div>
+          <div
+            id="system"
+            class="absolute text-center"
+            style="
+              position: absolute;
+              text-align: center;
+              left: 15px;
+              top: 455px;
+              z-index: 20;
+            "
+          >
+            <div style="font-size: 24px">💻</div>
+            <div style="font-size: 10px; font-weight: 600">System</div>
+          </div>
+
+          <!-- Internet (centered on WAF, extended downward) -->
+          <div
+            id="internet"
+            class="absolute flex items-center justify-center"
+            style="
+              left: 85px;
+              top: 90px;
+              width: 55px;
+              height: 682px;
+              border: 2px solid #888;
+              border-radius: 50%;
+              background: #f0f8ff;
+              z-index: 15;
+            "
+          >
+            <div
+              style="
+                font-size: 13px;
+                font-weight: 600;
+                writing-mode: vertical-rl;
+                letter-spacing: 1px;
+              "
+            >
+              Internet
+            </div>
+          </div>
+
+          <!-- AWS Cloud frame -->
+          <div
+            style="
+              position: absolute;
+              left: 165px;
+              top: 10px;
+              right: 12px;
+              bottom: 10px;
+              border: 3px solid #232f3e;
+              border-radius: 5px;
+              background: #f5f5f5;
+              z-index: 1;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              left: 175px;
+              top: 3px;
+              z-index: 60;
+              background: #f5f5f5;
+              padding: 0 5px;
+              font-size: 12px;
+            "
+          >
+            <b>AWS Cloud</b>
+          </div>
+
+          <!-- ① Management & Governance section -->
+          <div
+            style="
+              position: absolute;
+              left: 693px;
+              top: 32px;
+              width: 299px;
+              height: 100px;
+              border: 2px solid #c06080;
+              border-radius: 4px;
+              z-index: 2;
+              background: rgba(192, 96, 128, 0.07);
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              left: 838px;
+              top: 18px;
+              z-index: 60;
+              background: rgba(192, 96, 128, 0.15);
+              padding: 0 5px;
+              font-size: 13px;
+              font-weight: bold;
+              transform: translateX(-50%);
+            "
+          >
+            ❶System Management
+          </div>
+
+          <!-- Resources inside Management & Governance -->
+          <div
+            id="cloudtrail"
+            class="r b"
+            style="left: 703px; top: 45px; width: 130px; text-align: center"
+          >
+            CloudTrail
+          </div>
+          <div
+            id="aws-config"
+            class="r b"
+            style="left: 852px; top: 45px; width: 130px; text-align: center"
+          >
+            Config
+          </div>
+          <div
+            id="session-mgr"
+            class="r b"
+            style="left: 852px; top: 90px; width: 130px; text-align: center"
+          >
+            Session Manager
+          </div>
+
+          <!-- Management Console (outside Management & Governance box) -->
+          <div
+            id="mgmt-console"
+            class="r b"
+            style="left: 200px; top: 90px; width: 160px; text-align: center"
+          >
+            Management Console
+          </div>
+
+          <!-- ⑤ CI/CD & Developer Tools section -->
+          <div
+            style="
+              position: absolute;
+              left: 178px;
+              top: 135px;
+              width: 330px;
+              height: 110px;
+              border: 2px solid #b05050;
+              border-radius: 4px;
+              z-index: 2;
+              background: rgba(176, 80, 80, 0.07);
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              left: 343px;
+              top: 122px;
+              z-index: 60;
+              background: rgba(176, 80, 80, 0.15);
+              padding: 0 5px;
+              font-size: 13px;
+              font-weight: bold;
+              transform: translateX(-50%);
+            "
+          >
+            ❺CI/CD
+          </div>
+
+          <!-- CodePipeline (framed like a VPC) -->
+          <div
+            id="cp-frame"
+            class="r"
+            style="
+              position: absolute;
+              left: 188px;
+              top: 146px;
+              width: 310px;
+              height: 90px;
+              border: 3px solid #777;
+              border-radius: 4px;
+              z-index: 3;
+              background: #fff;
+            "
+          ></div>
+          <div
+            id="cp-label"
+            class="r"
+            style="
+              position: absolute;
+              left: 198px;
+              top: 138px;
+              z-index: 60;
+              background: rgba(255, 255, 255, 0.7);
+              padding: 0 4px;
+              font-size: 11px;
+            "
+          >
+            <b>CodePipeline</b>
+          </div>
+          <div
+            id="codecommit"
+            class="r b"
+            style="left: 200px; top: 155px; width: 130px; text-align: center"
+          >
+            CodeCommit
+          </div>
+          <div
+            id="codebuild"
+            class="r b"
+            style="left: 355px; top: 155px; width: 130px; text-align: center"
+          >
+            CodeBuild
+          </div>
+          <div
+            id="codedeploy"
+            class="r b"
+            style="left: 355px; top: 200px; width: 130px; text-align: center"
+          >
+            CodeDeploy
+          </div>
+          <div
+            id="ecr"
+            class="r b"
+            style="left: 703px; top: 155px; width: 130px; text-align: center"
+          >
+            ECR
+          </div>
+          <div
+            id="ecs"
+            class="r b"
+            style="left: 703px; top: 200px; width: 130px; text-align: center"
+          >
+            ECS
+          </div>
+
+          <!-- ② Data Store (Database / Storage) section -->
+          <div
+            style="
+              position: absolute;
+              left: 1154px;
+              top: 140px;
+              width: 148px;
+              height: 562px;
+              border: 2px solid #5c9040;
+              border-radius: 4px;
+              z-index: 9;
+              background: rgba(92, 144, 64, 0.07);
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              left: 1228px;
+              top: 126px;
+              z-index: 60;
+              background: rgba(92, 144, 64, 0.15);
+              padding: 0 5px;
+              font-size: 13px;
+              font-weight: bold;
+              transform: translateX(-50%);
+            "
+          >
+            ❷Data Store
+          </div>
+
+          <!-- ② External VPC resources (S3 & DynamoDB) -->
+          <div
+            id="dynamodb"
+            class="r b"
+            style="left: 1166px; top: 200px; width: 130px; text-align: center"
+          >
+            DynamoDB
+          </div>
+          <div
+            id="s3"
+            class="r b"
+            style="left: 1166px; top: 155px; width: 130px; text-align: center"
+          >
+            S3
+          </div>
+
+          <!-- Database resources inside private subnet -->
+          <div
+            id="efs"
+            class="r b"
+            style="left: 1166px; top: 325px; width: 130px; text-align: center"
+          >
+            EFS
+          </div>
+          <div
+            id="elasticache"
+            class="r b"
+            style="left: 1166px; top: 370px; width: 130px; text-align: center"
+          >
+            ElastiCache
+          </div>
+          <div
+            id="aurora"
+            class="r b"
+            style="left: 1166px; top: 415px; width: 130px; text-align: center"
+          >
+            Aurora
+          </div>
+          <div
+            id="rds"
+            class="r b"
+            style="left: 1166px; top: 460px; width: 130px; text-align: center"
+          >
+            RDS
+          </div>
+
+          <!-- ③ Networking (Networking & Content Delivery) section -->
+          <div
+            style="
+              position: absolute;
+              left: 178px;
+              top: 268px;
+              width: 810px;
+              height: 434px;
+              border: 2px solid #7060b0;
+              border-radius: 4px;
+              z-index: 10;
+              background: rgba(112, 96, 176, 0.07);
+              pointer-events: none;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              left: 568px;
+              top: 254px;
+              z-index: 60;
+              background: rgba(112, 96, 176, 0.15);
+              padding: 0 5px;
+              font-size: 13px;
+              font-weight: bold;
+              transform: translateX(-50%);
+            "
+          >
+            ❸Networking
+          </div>
+
+          <!-- Networking resources outside VPC (width 130px) -->
+          <div
+            id="route53"
+            class="b"
+            style="left: 200px; top: 460px; width: 130px; text-align: center"
+          >
+            Route 53
+          </div>
+          <div
+            id="aws-waf"
+            class="r b"
+            style="
+              left: 200px;
+              top: 371px;
+              width: 130px;
+              text-align: center;
+              z-index: 55;
+            "
+          >
+            WAF
+          </div>
+          <div
+            id="acm"
+            class="r b"
+            style="left: 200px; top: 505px; width: 130px; text-align: center"
+          >
+            ACM
+          </div>
+          <div
+            id="cloudfront"
+            class="r b"
+            style="
+              left: 200px;
+              top: 416px;
+              width: 130px;
+              text-align: center;
+              z-index: 55;
+            "
+          >
+            CloudFront
+          </div>
+          <div
+            id="api-gateway"
+            class="r b"
+            style="left: 355px; top: 416px; width: 130px; text-align: center"
+          >
+            API Gateway
+          </div>
+
+          <!-- VPC (white background, contained in AWS Cloud) -->
+          <div
+            id="vpc-frame"
+            class="r"
+            style="
+              position: absolute;
+              left: 505px;
+              top: 247px;
+              right: 25px;
+              height: 460px;
+              background: #fff;
+              border: 3px solid #777;
+              border-radius: 4px;
+              z-index: 5;
+            "
+          ></div>
+          <div
+            id="vpc-label"
+            class="r"
+            style="
+              position: absolute;
+              left: 518px;
+              top: 239px;
+              z-index: 60;
+              background: rgba(255, 255, 255, 0.7);
+              padding: 0 4px;
+              font-size: 11px;
+            "
+          >
+            <b>VPC</b>
+          </div>
+
+          <!-- Route53 VPC (outside subnets, inside VPC, left-aligned) -->
+          <div
+            id="route53-vpc"
+            class="r b"
+            style="
+              left: 544px;
+              top: 280px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            Route 53 Resolver
+          </div>
+
+          <!-- AZ labels -->
+          <div
+            id="az-a"
+            class="r"
+            style="
+              position: absolute;
+              left: 522px;
+              top: 330px;
+              width: 12px;
+              height: 164px;
+              z-index: 20;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: rgba(219, 234, 254, 0.6);
+              border-radius: 2px;
+            "
+          >
+            <span
+              style="
+                writing-mode: vertical-rl;
+                letter-spacing: 2px;
+                font-size: 10px;
+                font-weight: bold;
+                color: #1d4ed8;
+              "
+              >AZ-a</span
+            >
+          </div>
+          <div
+            id="az-b"
+            class="r"
+            style="
+              position: absolute;
+              left: 522px;
+              top: 520px;
+              width: 12px;
+              height: 164px;
+              z-index: 20;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: rgba(237, 233, 254, 0.6);
+              border-radius: 2px;
+            "
+          >
+            <span
+              style="
+                writing-mode: vertical-rl;
+                letter-spacing: 2px;
+                font-size: 10px;
+                font-weight: bold;
+                color: #6d28d9;
+              "
+              >AZ-c</span
+            >
+          </div>
+
+          <!-- Private subnet left (ELB + ④ Computing) -->
+          <div
+            id="ps-left-label"
+            class="r"
+            style="
+              position: absolute;
+              left: 701px;
+              top: 314px;
+              z-index: 60;
+              background: rgba(230, 230, 230, 0.6);
+              padding: 0 4px;
+              font-size: 10px;
+              color: #ea580c;
+            "
+          >
+            <b>Private Subnet</b>
+          </div>
+          <div
+            id="ps-left-frame"
+            class="r"
+            style="
+              position: absolute;
+              left: 696px;
+              top: 322px;
+              width: 447px;
+              height: 180px;
+              background: rgba(200, 200, 200, 0.25);
+              border: 2px solid #bbb;
+              border-radius: 4px;
+              z-index: 6;
+            "
+          ></div>
+
+          <!-- Private subnet right (Data Store) -->
+          <div
+            id="ps-right-label"
+            class="r"
+            style="
+              position: absolute;
+              left: 1156px;
+              top: 314px;
+              z-index: 60;
+              background: rgba(230, 230, 230, 0.6);
+              padding: 0 4px;
+              font-size: 10px;
+              color: #ea580c;
+            "
+          >
+            <b>Private Subnet</b>
+          </div>
+          <div
+            id="ps-right-frame"
+            class="r"
+            style="
+              position: absolute;
+              left: 1151px;
+              top: 322px;
+              width: 150px;
+              height: 180px;
+              background: rgba(200, 200, 200, 0.25);
+              border: 2px solid #bbb;
+              border-radius: 4px;
+              z-index: 6;
+            "
+          ></div>
+
+          <!-- Public subnet (AZ-a) -->
+          <div
+            id="pub-frame"
+            class="r"
+            style="
+              position: absolute;
+              left: 536px;
+              top: 322px;
+              width: 150px;
+              height: 180px;
+              background: rgba(125, 194, 66, 0.12);
+              border: 2px solid #7dc242;
+              border-radius: 4px;
+              z-index: 7;
+            "
+          ></div>
+          <div
+            id="pub-label"
+            class="r"
+            style="
+              position: absolute;
+              left: 546px;
+              top: 314px;
+              z-index: 60;
+              background: rgba(125, 194, 66, 0.25);
+              padding: 0 4px;
+              font-size: 10px;
+              color: #3f8624;
+            "
+          >
+            <b>Public Subnet</b>
+          </div>
+
+          <!-- Public subnet (AZ-c) -->
+          <div
+            id="pub2-frame"
+            class="r"
+            style="
+              position: absolute;
+              left: 536px;
+              top: 512px;
+              width: 150px;
+              height: 180px;
+              background: rgba(125, 194, 66, 0.12);
+              border: 2px solid #7dc242;
+              border-radius: 4px;
+              z-index: 7;
+            "
+          ></div>
+          <div
+            id="pub2-label"
+            class="r"
+            style="
+              position: absolute;
+              left: 546px;
+              top: 504px;
+              z-index: 60;
+              background: rgba(125, 194, 66, 0.25);
+              padding: 0 4px;
+              font-size: 10px;
+              color: #3f8624;
+            "
+          >
+            <b>Public Subnet</b>
+          </div>
+
+          <!-- Lower: Private subnet left 2 -->
+          <div
+            id="ps2-left-label"
+            class="r"
+            style="
+              position: absolute;
+              left: 701px;
+              top: 504px;
+              z-index: 60;
+              background: rgba(230, 230, 230, 0.6);
+              padding: 0 4px;
+              font-size: 10px;
+              color: #ea580c;
+            "
+          >
+            <b>Private Subnet</b>
+          </div>
+          <div
+            id="ps2-left-frame"
+            class="r"
+            style="
+              position: absolute;
+              left: 696px;
+              top: 512px;
+              width: 447px;
+              height: 180px;
+              background: rgba(200, 200, 200, 0.25);
+              border: 2px solid #bbb;
+              border-radius: 4px;
+              z-index: 6;
+            "
+          ></div>
+
+          <!-- Lower: Private subnet right 2 -->
+          <div
+            id="ps2-right-label"
+            class="r"
+            style="
+              position: absolute;
+              left: 1156px;
+              top: 504px;
+              z-index: 60;
+              background: rgba(230, 230, 230, 0.6);
+              padding: 0 4px;
+              font-size: 10px;
+              color: #ea580c;
+            "
+          >
+            <b>Private Subnet</b>
+          </div>
+          <div
+            id="ps2-right-frame"
+            class="r"
+            style="
+              position: absolute;
+              left: 1151px;
+              top: 512px;
+              width: 150px;
+              height: 180px;
+              background: rgba(200, 200, 200, 0.25);
+              border: 2px solid #bbb;
+              border-radius: 4px;
+              z-index: 6;
+            "
+          ></div>
+
+          <!-- Resources inside VPC -->
+          <div
+            id="network-fw"
+            class="r b"
+            style="
+              left: 544px;
+              top: 415px;
+              width: 130px;
+              text-align: center;
+              z-index: 55;
+            "
+          >
+            ALB
+          </div>
+          <!-- ELB top border (dashed frame surrounding both AZ ALBs) -->
+          <div
+            id="elb-pub-border"
+            class="r"
+            style="
+              position: absolute;
+              left: 538px;
+              top: 408px;
+              width: 142px;
+              height: 195px;
+              border: 2px dashed #d97706;
+              border-radius: 4px;
+              z-index: 9;
+              pointer-events: none;
+            "
+          ></div>
+          <div
+            id="elb-pub-label"
+            class="r"
+            style="
+              position: absolute;
+              left: 609px;
+              top: 399px;
+              z-index: 61;
+              background: rgba(255, 255, 255, 0.9);
+              padding: 0 4px;
+              font-size: 10px;
+              font-weight: bold;
+              color: #d97706;
+              transform: translateX(-50%);
+            "
+          >
+            ELB
+          </div>
+          <!-- Internal ELB (same style as public ALB border/label) -->
+          <div
+            id="elb-int-border"
+            class="r"
+            style="
+              position: absolute;
+              left: 845px;
+              top: 408px;
+              width: 142px;
+              height: 195px;
+              border: 2px dashed #d97706;
+              border-radius: 4px;
+              z-index: 9;
+              pointer-events: none;
+            "
+          ></div>
+          <div
+            id="elb-int-label"
+            class="r"
+            style="
+              position: absolute;
+              left: 916px;
+              top: 399px;
+              z-index: 61;
+              background: rgba(255, 255, 255, 0.9);
+              padding: 0 4px;
+              font-size: 10px;
+              font-weight: bold;
+              color: #d97706;
+              transform: translateX(-50%);
+            "
+          >
+            ELB
+          </div>
+          <div
+            id="elb"
+            class="r b"
+            style="
+              left: 852px;
+              top: 415px;
+              width: 130px;
+              text-align: center;
+              z-index: 55;
+            "
+          >
+            ALB
+          </div>
+          <div
+            id="vpc-flowlog"
+            class="r b"
+            style="
+              left: 852px;
+              top: 280px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            VPC Flow Logs
+          </div>
+          <div
+            id="vpc-endpoint"
+            class="r b"
+            style="
+              left: 852px;
+              top: 234px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            VPC Endpoint
+          </div>
+          <!-- IGW (placed vertically on the left edge of VPC) -->
+          <div
+            id="igw"
+            class="r b"
+            style="
+              left: 490px;
+              top: 366px;
+              width: 30px;
+              height: 130px;
+              text-align: center;
+              z-index: 20;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 2px;
+            "
+          >
+            <span
+              style="
+                writing-mode: vertical-rl;
+                letter-spacing: 1px;
+                font-size: 11px;
+                font-weight: bold;
+              "
+              >Internet Gateway</span
+            >
+          </div>
+          <!-- NGW (NAT Gateway, toggleable) -->
+          <div
+            id="ngw"
+            class="r b"
+            style="
+              left: 544px;
+              top: 325px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            NAT Gateway
+          </div>
+          <!-- Network Firewall (upper) -->
+          <div
+            id="nfw"
+            class="r b"
+            style="
+              left: 544px;
+              top: 370px;
+              width: 130px;
+              text-align: center;
+              z-index: 55;
+            "
+          >
+            Network Firewall
+          </div>
+
+          <!-- ===== ④ Computing (BE layer, Compute) ===== -->
+          <div
+            style="
+              position: absolute;
+              left: 992px;
+              top: 268px;
+              width: 148px;
+              height: 434px;
+              border: 2px solid #c07828;
+              border-radius: 4px;
+              z-index: 8;
+              background: rgba(192, 120, 40, 0.07);
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              left: 1066px;
+              top: 254px;
+              z-index: 60;
+              background: rgba(192, 120, 40, 0.15);
+              padding: 0 5px;
+              font-size: 13px;
+              font-weight: bold;
+              transform: translateX(-50%);
+            "
+          >
+            ❹Computing (BE)
+          </div>
+          <!-- ④ Computing (FE layer) -->
+          <div
+            style="
+              position: absolute;
+              left: 698px;
+              top: 388px;
+              width: 290px;
+              height: 224px;
+              border: 2px solid #c07828;
+              border-radius: 4px;
+              z-index: 8;
+              background: rgba(192, 120, 40, 0.07);
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              left: 840px;
+              top: 374px;
+              z-index: 60;
+              background: rgba(192, 120, 40, 0.15);
+              padding: 0 5px;
+              font-size: 13px;
+              font-weight: bold;
+              transform: translateX(-50%);
+            "
+          >
+            ❹Computing (FE)
+          </div>
+
+          <!-- FE-layer resources (pre-ALB) -->
+          <div
+            id="fargate-fe"
+            class="r b"
+            style="
+              left: 703px;
+              top: 415px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            Fargate
+          </div>
+          <div
+            id="ec2-fe"
+            class="r b"
+            style="
+              left: 703px;
+              top: 415px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            EC2
+          </div>
+          <!-- Resources inside ⑤ (BE layer) -->
+          <div
+            id="fargate"
+            class="r b"
+            style="
+              left: 1001px;
+              top: 415px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            Fargate
+          </div>
+          <div
+            id="ec2"
+            class="r b"
+            style="
+              left: 1001px;
+              top: 415px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            EC2
+          </div>
+          <!-- EKS removed per user request -->
+
+          <!-- Lambda (inside ⑤ frame, inside subnet) -->
+          <div
+            id="eni"
+            class="r b"
+            style="
+              left: 1001px;
+              top: 325px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            ENI
+          </div>
+          <!-- Lambda (inside ⑤ frame, outside subnet, aligned to VPC Flow Logs height) -->
+          <div
+            id="lambda2"
+            class="r b"
+            style="
+              left: 1001px;
+              top: 280px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            Lambda
+          </div>
+          <!-- HA redundancy: lower resources (shown only when HA ON) -->
+          <div
+            id="network-fw2"
+            class="r b off"
+            style="
+              left: 544px;
+              top: 560px;
+              width: 130px;
+              text-align: center;
+              z-index: 55;
+            "
+          >
+            ALB
+          </div>
+          <div
+            id="nfw2"
+            class="r b off"
+            style="
+              left: 544px;
+              top: 605px;
+              width: 130px;
+              text-align: center;
+              z-index: 55;
+            "
+          >
+            Network Firewall
+          </div>
+          <div
+            id="ngw2"
+            class="r b off"
+            style="
+              left: 544px;
+              top: 650px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            NAT Gateway
+          </div>
+          <div
+            id="elb2"
+            class="r b off"
+            style="
+              left: 852px;
+              top: 560px;
+              width: 130px;
+              text-align: center;
+              z-index: 55;
+            "
+          >
+            ALB
+          </div>
+          <div
+            id="eni2"
+            class="r b off"
+            style="
+              left: 1001px;
+              top: 650px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            ENI
+          </div>
+          <div
+            id="fargate2"
+            class="r b off"
+            style="
+              left: 1001px;
+              top: 560px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            Fargate
+          </div>
+          <div
+            id="ec22"
+            class="r b off"
+            style="
+              left: 1001px;
+              top: 560px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            EC2
+          </div>
+          <!-- eks2 removed -->
+          <!-- eks-fe2 removed -->
+          <div
+            id="ec2-fe2"
+            class="r b off"
+            style="
+              left: 703px;
+              top: 560px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            EC2
+          </div>
+          <div
+            id="fargate-fe2"
+            class="r b off"
+            style="
+              left: 703px;
+              top: 560px;
+              width: 130px;
+              text-align: center;
+              z-index: 20;
+            "
+          >
+            Fargate
+          </div>
+          <div
+            id="efs2"
+            class="r b off"
+            style="
+              position: absolute;
+              left: 1166px;
+              top: 650px;
+              width: 130px;
+              text-align: center;
+            "
+          >
+            EFS
+          </div>
+          <div
+            id="elasticache2"
+            class="r b off"
+            style="
+              position: absolute;
+              left: 1166px;
+              top: 605px;
+              width: 130px;
+              text-align: center;
+            "
+          >
+            ElastiCache
+          </div>
+          <div
+            id="aurora2"
+            class="r b off"
+            style="
+              position: absolute;
+              left: 1166px;
+              top: 560px;
+              width: 130px;
+              text-align: center;
+            "
+          >
+            Aurora
+          </div>
+          <div
+            id="rds2"
+            class="r b off"
+            style="
+              position: absolute;
+              left: 1166px;
+              top: 515px;
+              width: 130px;
+              text-align: center;
+            "
+          >
+            RDS
+          </div>
+        </div>
+        <!-- End of main diagram canvas -->
+      </div>
+    </div>
+
+    <script>
+      const S = {};
+      document.querySelectorAll(".tb").forEach((b) => {
+        if (b.dataset.rs) {
+          b.dataset.rs.split(",").forEach((id) => {
+            // Ensure AZ-c ALB (elb2) is always hidden on initialization
+            if (id === "elb2") {
+              S[id] = false;
+              const el = document.getElementById(id);
+              if (el) el.classList.add("off");
+            } else {
+              S[id] = true;
+              const el = document.getElementById(id);
+              if (el) el.classList.remove("off");
+            }
+          });
+        } else {
+          // Ensure AZ-c ALB (elb2) is always hidden on initialization
+          if (b.dataset.r === "elb2") {
+            S[b.dataset.r] = false;
+            const el = document.getElementById(b.dataset.r);
+            if (el) el.classList.add("off");
+          } else {
+            S[b.dataset.r] = true;
+            const el = document.getElementById(b.dataset.r);
+            if (el) el.classList.remove("off");
+          }
+        }
       });
-    });
-  });
-});
-document.getElementById('ha-btn').addEventListener('click',()=>{
-  haEnabled=!haEnabled;
-  const btn=document.getElementById('ha-btn');
-  btn.textContent='🔄 HA/冗長化 ('+(haEnabled?'ON':'OFF')+')';
-  btn.style.background=haEnabled?'#059669':'#7c3aed';
-  updateHAResources();
-});
-// サブネット切替（プライベート↔パブリック）
-document.getElementById('pst').addEventListener('click',()=>{
-  psPublic=!psPublic;
-  ['ps-left-label','ps2-left-label'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(psPublic){
-      el.innerHTML='\ud83d\udd13 <b>\u30d1\u30d6\u30ea\u30c3\u30af\u30b5\u30d6\u30cd\u30c3\u30c8</b>';
-      el.style.background='rgba(125,194,66,0.25)';
-      el.style.color='#3F8624';
-    } else {
-      el.innerHTML='\ud83d\udd12 <b>\u30d7\u30e9\u30a4\u30d9\u30fc\u30c8\u30b5\u30d6\u30cd\u30c3\u30c8</b>';
-      el.style.background='rgba(230,230,230,0.6)';
-      el.style.color='#ea580c';
-    }
-  });
-  ['ps-left-frame','ps2-left-frame'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(psPublic){
-      el.style.background='rgba(125,194,66,0.12)';
-      el.style.borderColor='#7DC242';
-    } else {
-      el.style.background='rgba(200,200,200,0.25)';
-      el.style.borderColor='#bbb';
-    }
-  });
-  document.getElementById('pst').textContent=psPublic?'\ud83d\udd13\u2192\ud83d\udd12 サブネット切替':'\ud83d\udd12\u2192\ud83d\udd13 サブネット切替';
-});
-</script>
-</body>
+
+      // Initially show GitHub, hide GitLab (left position unified to GitHub for anchoring)
+      S["github"] = true;
+      S["gitlab"] = false;
+      updateGitHost();
+      // Default to EC2 (mutually exclusive with Fargate)
+      S["ec2"] = true;
+      S["fargate"] = false;
+      // Ensure visuals reflect the EC2 default
+      const eEc2 = document.getElementById("ec2");
+      const eFarg = document.getElementById("fargate");
+      if (eEc2) eEc2.classList.remove("off");
+      if (eFarg) eFarg.classList.add("off");
+      const _gt = document.getElementById('git-toggle');
+      if (_gt) {
+        const dot = _gt.querySelector('.dot');
+        if (dot) dot.style.color = '#22c55e';
+      }
+
+      let haEnabled = false;
+      let feLayerEnabled = true;
+      // FE-layer resources are mapped to corresponding BE resources
+      // Public/internal ALB buttons can be toggled independently
+      const feMap = {
+        "fargate-fe": "fargate",
+        "ec2-fe": "ec2",
+      };
+      function updateFEResources() {
+        Object.entries(feMap).forEach(([feid, beid]) => {
+          const el = document.getElementById(feid);
+          if (!el) return;
+          const show = feLayerEnabled && S[beid] !== false;
+          S[feid] = show;
+          if (show) el.classList.remove("off");
+          else el.classList.add("off");
+        });
+        // Internal ALB is linked with FE layer
+        const elbEl = document.getElementById("elb");
+        const elbIntBorder = document.getElementById("elb-int-border");
+        const elbIntLabel = document.getElementById("elb-int-label");
+        // Ensure the internal ALB and its enclosing ELB visuals follow FE layer state
+        [
+          ["elb", elbEl],
+          ["elb-int-border", elbIntBorder],
+          ["elb-int-label", elbIntLabel],
+        ].forEach(([id, node]) => {
+          if (!node) return;
+          S[id] = feLayerEnabled;
+          if (feLayerEnabled) node.classList.remove("off");
+          else node.classList.add("off");
+        });
+      }
+      // WAF display control: each WAF is shown only when the corresponding service is ON
+      // aws-waf3 is shown only when public ALB (network-fw) is present
+      function updateWAFResources() {
+        // Previous coupling control removed; toggles now control ON/OFF individually
+      }
+      const haLowerIds = [
+        "ngw2",
+        "network-fw2",
+        "nfw2",
+        "elb2",
+        "eni2",
+        "fargate2",
+        "ec22",
+        "efs2",
+        "elasticache2",
+        "aurora2",
+        "rds2",
+        "fargate-fe2",
+        "ec2-fe2",
+      ];
+      const haMap = {
+        ngw2: "ngw",
+        "network-fw2": "network-fw",
+        nfw2: "nfw",
+        elb2: "elb",
+        eni2: "eni",
+        fargate2: "fargate",
+        ec22: "ec2",
+        efs2: "efs",
+        elasticache2: "elasticache",
+        aurora2: "aurora",
+        rds2: "rds",
+        "fargate-fe2": "fargate-fe",
+        "ec2-fe2": "ec2-fe",
+      };
+      haLowerIds.forEach((id) => {
+        S[id] = false;
+      });
+
+      function updateHAResources() {
+        haLowerIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const show = haEnabled && S[haMap[id]] !== false;
+          S[id] = show;
+          if (show) el.classList.remove("off");
+          else el.classList.add("off");
+        });
+        draw();
+      }
+
+      // Show/hide left-menu emojis (GitHub / GitLab) according to S state
+      function syncEmojis() {
+        ["github", "gitlab"].forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          if (S[id] === false) el.classList.add("off");
+          else el.classList.remove("off");
+        });
+      }
+
+      // Replace Git display with left GitHub element
+      function updateGitHost() {
+        const host = S["gitlab"] === true ? "gitlab" : "github";
+        const hostEl = document.getElementById("github");
+        if (!hostEl) return;
+        if (host === "github") {
+          hostEl.innerHTML = '<div style="font-size: 22px">🐙</div><div style="font-size: 10px; font-weight: 600">GitHub</div>';
+        } else {
+          hostEl.innerHTML = '<div style="font-size: 22px">🦊</div><div style="font-size: 10px; font-weight: 600">GitLab</div>';
+        }
+        // Toggle display: show `hostEl` and hide the original `gitlab` element
+        hostEl.classList.remove("off");
+        const orig = document.getElementById("gitlab");
+        if (orig) orig.classList.add("off");
+      }
+
+      function selectGit(id) {
+        console.log('selectGit', id);
+        S["github"] = id === "github";
+        S["gitlab"] = id === "gitlab";
+        const githubBtn = document.querySelector('.tb[data-r="github"]');
+        const gitlabBtn = document.querySelector('.tb[data-r="gitlab"]');
+        if (githubBtn) {
+          const d = githubBtn.querySelector('.dot');
+          if (S['github']) { d.style.color = '#22c55e'; githubBtn.style.opacity = '1'; } else { d.style.color = '#ef4444'; githubBtn.style.opacity = '.5'; }
+        }
+        if (gitlabBtn) {
+          const d2 = gitlabBtn.querySelector('.dot');
+          if (S['gitlab']) { d2.style.color = '#22c55e'; gitlabBtn.style.opacity = '1'; } else { d2.style.color = '#ef4444'; gitlabBtn.style.opacity = '.5'; }
+        }
+        updateGitHost();
+        syncEmojis();
+        const toggle = document.getElementById('git-toggle');
+        if (toggle) {
+          const dot = toggle.querySelector('.dot');
+          if (dot) dot.style.color = S['github'] ? '#22c55e' : '#ef4444';
+        }
+      }
+
+      // Connection definitions: [from, to, fromSide, toSide, dashed]
+      // Sides: r=right, l=left, t=top, b=bottom
+      const C = [
+        // External connections
+        ["admin", "mgmt-console", "r", "l", false],
+        ["user", "internet", "r", "l", false],
+        ["system", "internet", "r", "l", false],
+        // Internet -> IGW/Route53 (WAF path controlled dynamically)
+        ["internet", "route53", "r", "l", false],
+        // IGW -> Public ALB (upper & lower when HA present)
+        ["igw", "network-fw", "r", "l", false, false],
+        ["igw", "network-fw2", "r", "l", false, false],
+        ["mgmt-console", "s3", "r", "l", false, "top"],
+        // CI/CD
+        ["github", "codecommit", "r", "l", false, false],
+        ["gitlab", "codecommit", "r", "l", false, false],
+        ["codecommit", "codebuild", "r", "l", false, false],
+        ["codebuild", "ecr", "r", "l", false, false],
+        ["codebuild", "codedeploy", "b", "t", false, false],
+        ["codedeploy", "ecs", "r", "l", false, false],
+        ["ecs", "fargate", "b", "t", false],
+        ["ecs", "fargate-fe", "b", "t", false],
+        ["ecs", "fargate2", "b", "t", false],
+        ["ecs", "fargate-fe2", "b", "t", false],
+        ["ecr", "ecs", "b", "t", false, false],
+        // 1 System Management
+        ["mgmt-console", "session-mgr", "r", "l", true, false],
+        // Session Manager -> EC2 (BE upper/lower) and EC2 (FE upper/lower)
+        ["session-mgr", "ec2", "b", "t", true, false],
+        ["session-mgr", "ec22", "b", "t", true, false],
+        ["session-mgr", "ec2-fe", "b", "t", true, false],
+        ["session-mgr", "ec2-fe2", "b", "t", true, false],
+        // CloudFront -> S3, TransferSFTP -> S3
+        ["cloudfront", "s3", "r", "l", false, "top"],
+        // 3 Networking flow (WAF routing is controlled dynamically in draw())
+
+        ["igw", "lambda2", "r", "l", false, "top"],
+        // Public ALB -> FE layer -> Internal ALB -> BE layer
+        ["network-fw", "fargate-fe", "r", "l", false, false],
+        ["network-fw", "ec2-fe", "r", "l", false, false],
+        ["fargate-fe", "ngw", "l", "r", false, false],
+        ["ec2-fe", "ngw", "l", "r", false, false],
+        ["fargate-fe", "elb", "r", "l", false, false],
+        ["ec2-fe", "elb", "r", "l", false, false],
+        ["elb", "lambda2", "r", "l", false, false],
+        ["elb", "fargate", "r", "l", false, false],
+        ["elb", "ec2", "r", "l", false, false],
+        // EC2/Fargate -> NAT Gateway, and NAT Gateway -> Internet Gateway
+        ["ec2", "ngw", "l", "r", false, false],
+        ["fargate", "ngw", "l", "r", false, false],
+        ["ec22", "ngw2", "l", "r", false, false],
+        ["fargate2", "ngw2", "l", "r", false, false],
+        ["ngw", "igw", "l", "r", false, false],
+        ["ngw2", "igw", "l", "r", false, false],
+        // Computing (BE) -> Data Store (EC2)
+        ["ec2", "dynamodb", "r", "l", false, false],
+        ["ec2", "s3", "r", "l", false, false],
+        ["ec2", "efs", "r", "l", false, false],
+        ["ec2", "elasticache", "r", "l", false, false],
+        ["ec2", "aurora", "r", "l", false, false],
+        ["ec2", "rds", "r", "l", false, false],
+        // Computing (BE) -> Data Store (Fargate)
+        ["fargate", "dynamodb", "r", "l", false, false],
+        ["fargate", "s3", "r", "l", false, false],
+        ["fargate", "efs", "r", "l", false, false],
+        ["fargate", "elasticache", "r", "l", false, false],
+        ["fargate", "aurora", "r", "l", false, false],
+        ["fargate", "rds", "r", "l", false, false],
+        // Computing (BE) -> Data Store (Fargate/EC2)
+        // External Lambda -> DynamoDB only, via ENI
+        ["lambda2", "dynamodb", "r", "l", false, false],
+        ["lambda2", "eni", "b", "t", false, false],
+        // ENI→Aurora,RDS
+        ["eni", "aurora", "r", "l", false, false],
+        ["eni", "rds", "r", "l", false, false],
+        // VPC Flow Logs -> VPC Endpoint -> S3
+        ["vpc-flowlog", "vpc-endpoint", "t", "b", false, false],
+        ["vpc-endpoint", "s3", "t", "l", false, "top"],
+        // HA redundancy (lower) resource connections
+        ["elb2", "fargate2", "r", "l", false, false],
+        ["elb2", "ec22", "r", "l", false, false],
+        // Public ALB lower -> FE2 -> Internal ALB lower -> BE2
+        ["network-fw2", "fargate-fe2", "r", "l", false, false],
+        ["network-fw2", "ec2-fe2", "r", "l", false, false],
+        ["fargate-fe2", "ngw2", "l", "r", false, false],
+        ["ec2-fe2", "ngw2", "l", "r", false, false],
+        ["fargate-fe2", "elb2", "r", "l", false, false],
+        ["ec2-fe2", "elb2", "r", "l", false, false],
+
+        ["ec22", "dynamodb", "r", "l", false, false],
+        ["ec22", "s3", "r", "l", false, false],
+        ["ec22", "efs2", "r", "l", false, false],
+        ["ec22", "elasticache2", "r", "l", false, false],
+        ["ec22", "aurora2", "r", "l", false, false],
+        ["ec22", "rds2", "r", "l", false, false],
+        ["fargate2", "dynamodb", "r", "l", false, false],
+        ["fargate2", "s3", "r", "l", false, false],
+        ["fargate2", "efs2", "r", "l", false, false],
+        ["fargate2", "elasticache2", "r", "l", false, false],
+        ["fargate2", "aurora2", "r", "l", false, false],
+        ["fargate2", "rds2", "r", "l", false, false],
+        
+        ["eni2", "aurora2", "r", "l", false, false],
+        ["eni2", "rds2", "r", "l", false, false],
+      ];
+
+      function pt(el, side, other) {
+        const r = el.getBoundingClientRect(),
+          cr = document.getElementById("cv").getBoundingClientRect();
+        const cx = r.left + r.width / 2 - cr.left,
+          cy = r.top + r.height / 2 - cr.top;
+        if (side === "r") return { x: r.right - cr.left, y: cy };
+        if (side === "l") return { x: r.left - cr.left, y: cy };
+        if (side === "t") return { x: cx, y: r.top - cr.top };
+        if (side === "b") return { x: cx, y: r.bottom - cr.top };
+        // auto
+        const o = other.getBoundingClientRect();
+        const ox = o.left + o.width / 2 - cr.left,
+          oy = o.top + o.height / 2 - cr.top;
+        const dx = ox - cx,
+          dy = oy - cy;
+        if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return { x: cx, y: cy };
+        const hw = r.width / 2,
+          hh = r.height / 2;
+        const rx = Math.abs(dx) / hw,
+          ry = Math.abs(dy) / hh;
+        if (rx > ry) {
+          return {
+            x: dx > 0 ? r.right - cr.left : r.left - cr.left,
+            y: cy + dy * (hw / Math.abs(dx)),
+          };
+        } else {
+          return {
+            x: cx + dx * (hh / Math.abs(dy)),
+            y: dy > 0 ? r.bottom - cr.top : r.top - cr.top,
+          };
+        }
+      }
+
+      function draw() {
+        ["svg", "svg2", "svg3"].forEach((id) =>
+          document
+            .getElementById(id)
+            .querySelectorAll("line")
+            .forEach((l) => l.remove()),
+        );
+        const svg3 = document.getElementById("svg3");
+        function addLine(fid, tid, fs, ts, dash) {
+          // map github/gitlab anchors to the single left-side host (`github` element)
+          const fidAnchor = fid === "github" || fid === "gitlab" ? "github" : fid;
+          const tidAnchor = tid === "github" || tid === "gitlab" ? "github" : tid;
+          const fe = document.getElementById(fidAnchor),
+            te = document.getElementById(tidAnchor);
+          if (!fe || !te) return;
+          const fp = pt(fe, fs, te),
+            tp = pt(te, ts, fe);
+          const line = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "line",
+          );
+          line.setAttribute("x1", fp.x);
+          line.setAttribute("y1", fp.y);
+          line.setAttribute("x2", tp.x);
+          line.setAttribute("y2", tp.y);
+          line.setAttribute("stroke", "#444");
+          line.setAttribute("stroke-width", dash ? "1.2" : "1.5");
+          if (dash) line.setAttribute("stroke-dasharray", "6,4");
+          line.setAttribute("marker-end", "url(#ah3)");
+          if (S[fid] === false || S[tid] === false) line.classList.add("off");
+          svg3.appendChild(line);
+        }
+        C.forEach(([fid, tid, fs, ts, dash]) =>
+          addLine(fid, tid, fs, ts, dash),
+        );
+        // Sync WAF resource display state
+        updateWAFResources();
+
+        // Do not draw WAF arrows. If CloudFront/API Gateway/ALB is ON, draw Internet→IGW arrow.
+        // Internet→IGW arrow is relayed depending on CloudFront/API Gateway status
+        if (S["igw"] !== false) {
+          if (S["cloudfront"] !== false && S["api-gateway"] !== false) {
+            addLine("internet", "cloudfront", "r", "l", false);
+            addLine("cloudfront", "api-gateway", "r", "l", false);
+            addLine("api-gateway", "igw", "r", "l", false);
+          } else if (S["cloudfront"] !== false) {
+            addLine("internet", "cloudfront", "r", "l", false);
+            addLine("cloudfront", "igw", "r", "l", false);
+          } else if (S["api-gateway"] !== false) {
+            addLine("internet", "api-gateway", "r", "l", false);
+            addLine("api-gateway", "igw", "r", "l", false);
+          } else if (S["network-fw"] !== false || S["ec2"] !== false) {
+            addLine("internet", "igw", "r", "l", false);
+          }
+        }
+
+        // When CodePipeline is OFF: GitHub/GitLab -> ECR directly
+        if (S["codecommit"] === false) {
+          if (S["ecr"] !== false) {
+            addLine("github", "ecr", "r", "l", false);
+            addLine("gitlab", "ecr", "r", "l", false);
+          }
+          if (S["ecs"] !== false) {
+            addLine("github", "ecs", "r", "l", false);
+            addLine("gitlab", "ecs", "r", "l", false);
+          }
+        }
+        // Direct connections when FE layer + internal ALB is disabled (upper)
+        if (!feLayerEnabled) {
+          if (S["network-fw"] !== false) {
+            if (S["ec2"] !== false) addLine("network-fw", "ec2", "r", "l", false);
+            if (S["fargate"] !== false) addLine("network-fw", "fargate", "r", "l", false);
+          } else {
+            if (S["ec2"] !== false) addLine("igw", "ec2", "r", "l", false);
+            if (S["fargate2"] !== false) addLine("igw", "fargate", "r", "l", false);
+          }
+          // Direct connections when FE layer is disabled (lower HA)
+          if (haEnabled) {
+            if (S["network-fw2"] !== false) {
+              if (S["ec22"] !== false) addLine("network-fw2", "ec22", "r", "l", false);
+              if (S["fargate2"] !== false) addLine("network-fw2", "fargate2", "r", "l", false);
+            } else {
+              if (S["ec22"] !== false) addLine("igw", "ec22", "r", "l", false);
+              if (S["fargate2"] !== false) addLine("igw", "fargate2", "r", "l", false);
+            }
+          }
+        }
+
+        // ECS -> EC2 instances (show when ECS is enabled)
+        if (S["ecs"] !== false) {
+          if (S["ec2"] !== false) addLine("ecs", "ec2", "b", "t", false);
+          if (S["ec22"] !== false) addLine("ecs", "ec22", "b", "t", false);
+          if (S["ec2-fe"] !== false) addLine("ecs", "ec2-fe", "b", "t", false);
+          if (S["ec2-fe2"] !== false) addLine("ecs", "ec2-fe2", "b", "t", false);
+        }
+
+        // ECR -> EC2 instances: only show when ECS is OFF and ECR is ON
+        if (S["ecr"] !== false && S["ecs"] === false) {
+          if (S["ec2"] !== false) addLine("ecr", "ec2", "b", "t", false);
+          if (S["ec22"] !== false) addLine("ecr", "ec22", "b", "t", false);
+          if (S["ec2-fe"] !== false) addLine("ecr", "ec2-fe", "b", "t", false);
+          if (S["ec2-fe2"] !== false) addLine("ecr", "ec2-fe2", "b", "t", false);
+        }
+      }
+
+      // update left git host and sync emojis visibility each draw
+      updateGitHost();
+      syncEmojis();
+
+      setTimeout(draw, 120);
+      window.addEventListener("resize", draw);
+
+      document.querySelectorAll(".tb").forEach((b) => {
+        b.addEventListener("click", () => {
+          if (b.id === "git-toggle") return; // git-toggle has its own handler
+          // Lambda ⇄ VPC Lambda toggle (replaces left ENI button)
+          if (b.id === "lambda-vpc-toggle") {
+            // Lambda/ENI toggle is synchronized in EC2/Fargate style
+            const isEni = S["eni"] !== false;
+            S["eni"] = !isEni;
+            S["lambda"] = !isEni;
+            S["lambda2"] = !isEni;
+            ["eni", "lambda", "lambda2"].forEach((id) => {
+              const el = document.getElementById(id);
+              if (el) {
+                if (S[id]) el.classList.remove("off");
+                else el.classList.add("off");
+              }
+            });
+            // Update HA lower ENI via updateHAResources
+            updateHAResources();
+            // update button dot and opacity
+            const dd = b.querySelector('.dot');
+            if (dd) dd.style.color = S["eni"] ? '#22c55e' : '#ef4444';
+            b.style.opacity = S["eni"] ? '1' : '.5';
+            updateFEResources();
+            updateWAFResources();
+            draw();
+            return;
+          }
+            // Always update subnet display when NAT Gateway button is toggled
+            if (b.dataset.r === "ngw") {
+              setTimeout(() => { updateSubnetByNatGateway(); }, 0);
+            }
+          const d = b.querySelector(".dot");
+          if (b.dataset.rs) {
+            const ids = b.dataset.rs.split(",");
+            const anyOn = ids.some((id) => S[id] !== false);
+            ids.forEach((id) => {
+              S[id] = !anyOn;
+              const el = document.getElementById(id);
+              if (el) {
+                if (!anyOn) el.classList.remove("off");
+                else el.classList.add("off");
+              }
+              // NAT Gatewayボタンならサブネット表示も切り替え
+              if (id === "ngw") updateSubnetByNatGateway();
+            });
+            // Enforce EC2 <-> Fargate mutual exclusivity when toggling group buttons
+            if (ids.includes("ec2")) {
+              S["fargate"] = !S["ec2"];
+              const fEl = document.getElementById("fargate");
+              if (fEl) {
+                if (S["fargate"]) fEl.classList.remove("off");
+                else fEl.classList.add("off");
+              }
+            }
+            if (ids.includes("fargate")) {
+              S["ec2"] = !S["fargate"];
+              const eEl = document.getElementById("ec2");
+              if (eEl) {
+                if (S["ec2"]) eEl.classList.remove("off");
+                else eEl.classList.add("off");
+              }
+            }
+            d.style.color = anyOn ? "#ef4444" : "#22c55e";
+            b.style.opacity = anyOn ? ".5" : "1";
+          } else {
+            const id = b.dataset.r,
+              el = document.getElementById(id);
+            if (id === "github" || id === "gitlab") {
+              // Git source selection (not simple toggle)
+              selectGit(id);
+            } else {
+              // EC2 / Fargate are mutually exclusive
+              if (id === "ec2" || id === "fargate") {
+                const isEc2 = id === "ec2";
+                S["ec2"] = isEc2;
+                S["fargate"] = !isEc2;
+                const ecEl = document.getElementById("ec2");
+                const fgEl = document.getElementById("fargate");
+                if (ecEl) {
+                  if (S["ec2"]) ecEl.classList.remove("off");
+                  else ecEl.classList.add("off");
+                }
+                if (fgEl) {
+                  if (S["fargate"]) fgEl.classList.remove("off");
+                  else fgEl.classList.add("off");
+                }
+                // update dot colors for both possible buttons
+                const btnEc = document.querySelector('.tb[data-rs="ec2"]');
+                const btnFg = document.querySelector('.tb[data-rs="fargate"]') || document.querySelector('.tb[data-r="fargate"]');
+                if (btnEc) {
+                  const dd = btnEc.querySelector('.dot');
+                  if (dd) dd.style.color = S["ec2"] ? '#22c55e' : '#ef4444';
+                  btnEc.style.opacity = S["ec2"] ? '1' : '.5';
+                }
+                if (btnFg) {
+                  const dd2 = btnFg.querySelector('.dot');
+                  if (dd2) dd2.style.color = S["fargate"] ? '#22c55e' : '#ef4444';
+                  btnFg.style.opacity = S["fargate"] ? '1' : '.5';
+                }
+              } else {
+                S[id] = !S[id];
+                if (el) {
+                  if (S[id]) el.classList.remove("off");
+                  else el.classList.add("off");
+                }
+                d.style.color = S[id] ? "#22c55e" : "#ef4444";
+                b.style.opacity = S[id] ? "1" : ".5";
+                  // Always update subnet display when NAT Gateway button is toggled
+                  if (id === "ngw") {
+                    setTimeout(() => { updateSubnetByNatGateway(); }, 0);
+                  }
+              }
+              // If ECS is turned on via its button, default to Fargate
+              if (id === "ecs" && S["ecs"] === true) {
+                S["fargate"] = true;
+                S["ec2"] = false;
+                const fEl2 = document.getElementById("fargate");
+                const eEl2 = document.getElementById("ec2");
+                if (fEl2) fEl2.classList.remove("off");
+                if (eEl2) eEl2.classList.add("off");
+                const btnFg2 = document.querySelector('.tb[data-rs="fargate"]') || document.querySelector('.tb[data-r="fargate"]');
+                const btnEc2 = document.querySelector('.tb[data-rs="ec2"]');
+                if (btnFg2) {
+                  const dd3 = btnFg2.querySelector('.dot');
+                  if (dd3) dd3.style.color = '#22c55e';
+                  btnFg2.style.opacity = '1';
+                }
+                if (btnEc2) {
+                  const dd4 = btnEc2.querySelector('.dot');
+                  if (dd4) dd4.style.color = '#ef4444';
+                  btnEc2.style.opacity = '.5';
+                }
+              }
+            }
+          }
+          updateFEResources();
+          updateWAFResources();
+          updateHAResources();
+          // Update Git display after applyState
+          updateGitHost();
+          syncEmojis();
+          draw();
+        });
+      });
+
+      // git-toggle: single button to swap GitHub <-> GitLab at left position
+      const gitToggle = document.getElementById("git-toggle");
+      if (gitToggle) {
+        gitToggle.addEventListener("click", () => {
+          console.log('git-toggle clicked');
+          const next = S["github"] === true ? "gitlab" : "github";
+          selectGit(next);
+          updateFEResources();
+          updateWAFResources();
+          updateHAResources();
+          draw();
+        });
+      }
+      // Common URL clear function
+      function clearURLParams() {
+        const u = new URL(location.href);
+        u.search = "";
+        history.replaceState(null, "", u.toString());
+      }
+
+      document.getElementById("fe-btn").addEventListener("click", () => {
+        feLayerEnabled = !feLayerEnabled;
+        const d = document.getElementById("fe-btn").querySelector(".dot");
+        d.style.color = feLayerEnabled ? "#22c55e" : "#ef4444";
+        document.getElementById("fe-btn").style.opacity = feLayerEnabled
+          ? "1"
+          : ".5";
+
+        if (feLayerEnabled) {
+          const albBtn = document.querySelector('.tb[data-rs="network-fw,elb-pub-border,elb-pub-label"]');
+          if (albBtn) {
+            const ids = albBtn.dataset.rs.split(",");
+            const anyOn = ids.some((id) => S[id] !== false);
+            if (!anyOn) {
+              ids.forEach((id) => {
+                S[id] = true;
+                const el = document.getElementById(id);
+                if (el) el.classList.remove("off");
+              });
+              albBtn.querySelector(".dot").style.color = "#22c55e";
+              albBtn.style.opacity = "1";
+            }
+          }
+        }
+
+        updateFEResources();
+        updateWAFResources();
+        updateHAResources();
+        draw();
+      });
+      document.getElementById("sa").addEventListener("click", () => {
+        document.querySelectorAll(".tb").forEach((b) => {
+          if (b.dataset.rs) {
+            b.dataset.rs.split(",").forEach((id) => {
+              if (haLowerIds.includes(id)) return;
+              S[id] = true;
+              const el = document.getElementById(id);
+              if (el) el.classList.remove("off");
+            });
+          } else {
+            const id = b.dataset.r;
+            if (id && !haLowerIds.includes(id)) {
+              S[id] = true;
+              const el = document.getElementById(id);
+              if (el) el.classList.remove("off");
+            }
+          }
+          b.querySelector(".dot").style.color = "#22c55e";
+          b.style.opacity = "1";
+        });
+        // Always show Lambda, Lambda2, ENI
+        ["lambda", "lambda2", "eni"].forEach((id) => {
+          S[id] = true;
+          const el = document.getElementById(id);
+          if (el) el.classList.remove("off");
+        });
+        feLayerEnabled = true;
+        document.getElementById("fe-btn").querySelector(".dot").style.color =
+          "#22c55e";
+        document.getElementById("fe-btn").style.opacity = "1";
+        updateFEResources();
+        updateWAFResources();
+        updateHAResources();
+        draw();
+        clearURLParams();
+      });
+      document.getElementById("ha").addEventListener("click", () => {
+        document.querySelectorAll(".tb").forEach((b) => {
+          if (b.dataset.rs) {
+            b.dataset.rs.split(",").forEach((id) => {
+              if (haLowerIds.includes(id)) return;
+              S[id] = false;
+              const el = document.getElementById(id);
+              if (el) el.classList.add("off");
+            });
+          } else {
+            const id = b.dataset.r;
+            if (id && !haLowerIds.includes(id)) {
+              S[id] = false;
+              const el = document.getElementById(id);
+              if (el) el.classList.add("off");
+            }
+          }
+          b.querySelector(".dot").style.color = "#ef4444";
+          b.style.opacity = ".5";
+        });
+        // Always hide Lambda, Lambda2, ENI
+        ["lambda", "lambda2", "eni"].forEach((id) => {
+          S[id] = false;
+          const el = document.getElementById(id);
+          if (el) el.classList.add("off");
+        });
+        feLayerEnabled = false;
+        document.getElementById("fe-btn").querySelector(".dot").style.color =
+          "#ef4444";
+        document.getElementById("fe-btn").style.opacity = ".5";
+        updateFEResources();
+        updateWAFResources();
+        updateHAResources();
+        draw();
+        clearURLParams();
+      });
+
+      let psPublic = false;
+
+      // URL state sharing
+      function encodeState() {
+        const bits = [];
+        document.querySelectorAll(".tb").forEach((b) => {
+          if (b.dataset.rs) {
+            b.dataset.rs.split(",").forEach((id) => {
+              bits.push(id + ":" + (S[id] ? "1" : "0"));
+            });
+          } else {
+            bits.push(b.dataset.r + ":" + (S[b.dataset.r] ? "1" : "0"));
+          }
+        });
+        // Always include Lambda, Lambda2, ENI state
+        ["lambda", "lambda2", "eni"].forEach((id) => {
+          bits.push(id + ":" + (S[id] ? "1" : "0"));
+        });
+        // Explicitly include Git selection state
+        bits.push("github:" + (S["github"] ? "1" : "0"));
+        bits.push("gitlab:" + (S["gitlab"] ? "1" : "0"));
+        bits.push("_ps:" + (psPublic ? "1" : "0"));
+        bits.push("_fe:" + (feLayerEnabled ? "1" : "0"));
+        bits.push("_ha:" + (haEnabled ? "1" : "0"));
+        return btoa(bits.join(","));
+      }
+      function applyState(b64) {
+        try {
+          const pairs = atob(b64).split(",");
+          // First, reflect NAT Gateway state
+          const psPair = pairs.find((p) => p.startsWith("_ps:"));
+          let ngwValue = null;
+          let ec2Value = null;
+          if (psPair) {
+            const v = psPair.split(":")[1];
+            ngwValue = (v === "1") ? true : false;
+          }
+          // Also get EC2 state first
+          const ec2Pair = pairs.find((p) => p.startsWith("ec2:"));
+          if (ec2Pair) {
+            const v = ec2Pair.split(":")[1];
+            ec2Value = (v === "1") ? true : false;
+          }
+          if (ngwValue !== null) S["ngw"] = ngwValue;
+          if (ec2Value !== null) S["ec2"] = ec2Value;
+          updateSubnetByNatGateway();
+
+          // After reflecting all states, resync subnet display
+          setTimeout(() => { updateSubnetByNatGateway(); }, 0);
+          pairs.forEach((p) => {
+            const [k, v] = p.split(":");
+            if (k === "_ps") return;
+            if (k === "_fe") {
+              if ((v === "1") !== feLayerEnabled)
+                document.getElementById("fe-btn").click();
+              return;
+            }
+            if (k === "_ha") {
+              const want = v === "1";
+              if (want !== haEnabled) document.getElementById("ha-btn").click();
+              return;
+            }
+            S[k] = v === "1";
+            const el = document.getElementById(k);
+            const btn = document.querySelector('.tb[data-r="' + k + '"]');
+            if (el && btn) {
+              if (S[k]) {
+                el.classList.remove("off");
+                btn.querySelector(".dot").style.color = "#22c55e";
+                btn.style.opacity = "1";
+              } else {
+                el.classList.add("off");
+                btn.querySelector(".dot").style.color = "#ef4444";
+                btn.style.opacity = ".5";
+              }
+            } else if (el) {
+              if (S[k]) el.classList.remove("off");
+              else el.classList.add("off");
+            }
+          });
+          // Fallback: prefer GitHub when Git display state is unspecified or both are on
+          if (S["github"] !== true && S["gitlab"] !== true) {
+            S["github"] = true;
+            S["gitlab"] = false;
+          }
+          if (S["github"] === true && S["gitlab"] === true) {
+            S["gitlab"] = false;
+          }
+          document.querySelectorAll(".tb[data-rs]").forEach((b) => {
+            const ids = b.dataset.rs.split(",");
+            const allOn = ids.every((id) => S[id] !== false);
+            b.querySelector(".dot").style.color = allOn ? "#22c55e" : "#ef4444";
+            b.style.opacity = allOn ? "1" : ".5";
+          });
+          updateFEResources();
+          updateWAFResources();
+          updateHAResources();
+          // ensure git host visuals are synchronized after applying state
+          updateGitHost();
+          syncEmojis();
+          draw();
+        } catch (e) {}
+      }
+      const sp = new URLSearchParams(location.search);
+      if (sp.has("s")) setTimeout(() => applyState(sp.get("s")), 150);
+
+      document.getElementById("cp").addEventListener("click", () => {
+        const u = new URL(location.href);
+        u.searchParams.set("s", encodeState());
+        navigator.clipboard
+          .writeText(u.toString())
+          .then(() => {
+            const b = document.getElementById("cp");
+            b.textContent = "Copied!";
+            setTimeout(() => {
+              b.textContent = "Share URL";
+            }, 2000);
+          })
+          .catch(() => {
+            const u2 = new URL(location.href);
+            u2.searchParams.set("s", encodeState());
+              prompt("Please copy the URL:", u2.toString());
+          });
+      });
+
+      // Copy diagram to clipboard
+      document.getElementById("imgcp").addEventListener("click", () => {
+        html2canvas(document.getElementById("cv"), {
+          scale: 2,
+          useCORS: true,
+        }).then((canvas) => {
+          canvas.toBlob((blob) => {
+            navigator.clipboard
+              .write([new ClipboardItem({ "image/png": blob })])
+              .then(() => {
+                const b = document.getElementById("imgcp");
+                b.textContent = "Copied!";
+                setTimeout(() => {
+                  b.textContent = "Copy Diagram";
+                }, 2000);
+              })
+              .catch(() => {
+                const url = canvas.toDataURL();
+                window.open(url, "_blank");
+              });
+          });
+        });
+      });
+      document.getElementById("ha-btn").addEventListener("click", () => {
+        haEnabled = !haEnabled;
+        const btn = document.getElementById("ha-btn");
+        btn.textContent = "HA/Redundancy (" + (haEnabled ? "ON" : "OFF") + ")";
+        btn.style.background = haEnabled ? "#059669" : "#7c3aed";
+        updateHAResources();
+      });
+      // Subnet display is automatically switched based on NAT Gateway presence
+      function updateSubnetByNatGateway() {
+        const natGatewayOn = S["ngw"] !== false;
+        const ec2Only = S["ec2"] === true && S["ngw"] === false;
+        if (natGatewayOn && !ec2Only) {
+          psPublic = false;
+          ["ps-left-label", "ps2-left-label"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.innerHTML = "<b>Private Subnet</b>";
+              el.style.background = "rgba(230,230,230,0.6)";
+              el.style.color = "#ea580c";
+            }
+          });
+          ["ps-left-frame", "ps2-left-frame"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.style.background = "rgba(200,200,200,0.25)";
+              el.style.borderColor = "#bbb";
+            }
+          });
+        } else {
+          psPublic = true;
+          ["ps-left-label", "ps2-left-label"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.innerHTML = "<b>Public Subnet</b>";
+              el.style.background = "rgba(125,194,66,0.25)";
+              el.style.color = "#3F8624";
+            }
+          });
+          ["ps-left-frame", "ps2-left-frame"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.style.background = "rgba(125,194,66,0.12)";
+              el.style.borderColor = "#7DC242";
+            }
+          });
+        }
+      }
+    </script>
+  </body>
 </html>
